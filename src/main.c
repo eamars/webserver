@@ -14,11 +14,11 @@
 #define MAX_SZ 1024
 #define SERVER_PORT 8080
 
+// The multimedia content is still a problem
 const char *HTTP_RESPONSE_TEMPLATE =
 "HTTP/1.1 200 OK\r\n"
 "Server: ENCE360-WebServer/1.0\r\n"
 "Connection: close\r\n"
-"Content-Type: text/html\r\n"
 "Content-Length %ld\r\n"
 "\r\n"
 "%s\r\n"
