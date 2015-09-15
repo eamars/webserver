@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include "parser.h"
 #include "datetime.h"
@@ -206,6 +207,9 @@ void handle_fork(int msgsock)
 
 int main(int argc, char **argv)
 {
+	// ignore the return value from child
+	signal(SIGCHLD, SIG_IGN);
+
 	printf("This is the server with pid %d listening on port %d\n", getpid(), atoi(argv[1]));
 
 	int sock;
