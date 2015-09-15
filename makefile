@@ -14,8 +14,9 @@ all: src/webhttpd.out
 parser: test/parser.out
 test: test/test.out
 cgi: test/cgi.out
+datetime: test/datetime.out
 
-# Compile
+# Compile Source
 src/main.o: src/main.c
 	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
 
@@ -25,6 +26,10 @@ src/config.o: src/config.c
 src/parser.o: src/parser.c
 	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
 
+src/datetime.o: src/datetime.c
+	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
+
+# Compile Testcases
 test/parser.o: test/parser.c
 	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
 
@@ -34,8 +39,11 @@ test/test.o: test/test.c
 test/cgi.o: test/cgi.c
 	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
 
+test/datetime.o: test/datetime.c
+	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
+
 # Link
-src/webhttpd.out: src/main.o src/config.o src/parser.o
+src/webhttpd.out: src/main.o src/config.o src/parser.o src/datetime.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 test/parser.out: test/parser.o
@@ -45,6 +53,9 @@ test/test.out: test/test.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 test/cgi.out: test/cgi.o
+	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
+
+test/datetime.out: test/datetime.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 # Others

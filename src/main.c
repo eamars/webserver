@@ -10,6 +10,7 @@
 #include <fcntl.h>
 
 #include "parser.h"
+#include "datetime.h"
 
 #define MAX_SZ 1024
 #define SERVER_PORT 8080
@@ -17,9 +18,10 @@
 // The multimedia content is still a problem
 const char *HTTP_RESPONSE_TEMPLATE =
 "HTTP/1.1 200 OK\r\n"
-"Server: ENCE360-WebServer/1.0\r\n"
+"Server: webhttpd/1.0\r\n"
 "Connection: close\r\n"
 "Content-Length %ld\r\n"
+"Date: %s\r\n"
 "\r\n"
 "%s\r\n"
 "\r\n";
@@ -71,63 +73,6 @@ int accept_connection(int sock)
 	return msgsock;
 }
 
-int get_line(int msgsock, char *buf, int size)
-{
-
-	int sz;
-	int i = 0;
-	int ch;
-	int state = 0;
-
-	while ((i < MAX_SZ - 1) && state != 4)
-	{
-		sz = read(msgsock, &ch, 1);
-		if (sz > 0)
-		{
-			if (ch == 'r')
-			{
-				switch (state) {
-					case 0:
-						state = 1;
-						break;
-					case 1:
-						state = 0;
-						break;
-					case 2:
-						state = 3;
-						break;
-					case 3:
-						state = 0;
-						break;
-				}
-			}
-			else if (ch == '\n')
-			{
-				switch (state) {
-					case 0:
-						state = 0;
-						break;
-					case 1:
-						state = 2;
-						break;
-					case 2:
-						state = 0;
-						break;
-					case 3:
-						state = 4;
-						break;
-				}
-			}
-			buf[i++] = ch;
-		}
-		else
-		{
-			break;
-		}
-	}
-	buf[i] = 0;
-	return i;
-}
 
 char *read_file(char *path, size_t *file_size)
 {
@@ -171,11 +116,16 @@ char *read_file(char *path, size_t *file_size)
 
 int make_response(int msgsock, char *buffer, int size)
 {
-	// parse http header
 	int rc;
-
+	char datetime[MAX_DATETIME_LENGTH];
 	http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
+
+	// parse http header
 	rc = parse(header, buffer, size);
+
+	// get datetime
+	memset(datetime, 0, MAX_DATETIME_LENGTH);
+	rc = get_datetime(datetime);
 
 	// serve file
 	if (header->method == 1) // 1 is GET
@@ -187,7 +137,6 @@ int make_response(int msgsock, char *buffer, int size)
 		sprintf(path, "./html%s", header->url);
 		printf("PATH: %s\n", path);
 		file_buffer = read_file(path, &file_size);
-			printf("FILE: %s\n", file_buffer);
 
 		if (file_buffer == NULL)
 		{
@@ -196,9 +145,9 @@ int make_response(int msgsock, char *buffer, int size)
 		}
 		else
 		{
-			char buf[file_size + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
+			char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
 			memset(buf, 0, sizeof(buf));
-			sprintf(buf, HTTP_RESPONSE_TEMPLATE, file_size, file_buffer);
+			sprintf(buf, HTTP_RESPONSE_TEMPLATE, file_size, datetime, file_buffer);
 
 			printf("SEND: \n----------\n%s\n----------\n", buf);
 			write(msgsock, buf, sizeof(buf));
