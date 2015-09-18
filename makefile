@@ -6,11 +6,11 @@
 CC = clang
 CFLAGS = -Os -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter -g -std=c99 -D_GNU_SOURCE
 INCLUDE = -I./include -I./src
-LD_LIBS = lib/http_parser.o
+LD_LIBS = lib/http_parser.o -lpthread
 DEL = rm
 
 # Definitions for object
-PROG_OBJ = src/main.o src/config.o src/parser.o src/datetime.o
+PROG_OBJ = src/main.o src/config.o src/parser.o src/datetime.o src/client.o
 
 # Targets
 default: src/webhttpd.out

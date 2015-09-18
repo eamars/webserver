@@ -1,8 +1,8 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
-#define FIELD_SZ 1024
-#define MAX_NUM_FIELD 10
+#define FIELD_SZ 2048
+#define MAX_NUM_FIELD 16
 
 
 typedef struct

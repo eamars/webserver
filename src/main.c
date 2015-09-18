@@ -12,11 +12,12 @@
 
 #include "parser.h"
 #include "datetime.h"
+#include "client.h"
 
-#define MAX_SZ 1024
+#define MAX_SZ 8192
 #define SERVER_PORT 8080
 
-// The multimedia content is still a problem
+// The multimedia conte8192nt is still a problem
 const char *HTTP_RESPONSE_TEMPLATE =
 "HTTP/1.1 200 OK\r\n"
 "Server: webhttpd/1.0\r\n"
@@ -32,6 +33,7 @@ const char *HTTP_RESPONSE_404 =
 "\r\n"
 "404 - Page Not Found\r\n"
 "\r\n";
+
 
 
 
@@ -115,33 +117,55 @@ char *read_file(char *path, size_t *file_size)
 	return file_buffer;
 }
 
-int make_response(int msgsock, char *buffer, int size)
+int read_http_request(Client *client)
 {
+	int sz;
 	int rc;
-	char datetime[MAX_DATETIME_LENGTH];
+	char buffer[MAX_SZ];
+
+
+	memset(buffer, 0, MAX_SZ);
+
+	sz = read(client->msgsock, buffer, MAX_SZ);
+	printf("IP: %s\n", client->ipstr);
+	printf("RECV:\n----------\n%s\n----------\n", buffer);
+
+	// get http header
 	http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
 
 	// parse http header
-	rc = parse(header, buffer, size);
+	rc = parse(header, buffer, sz);
+
+	client->header = header;
+
+	return sz;
+}
+
+int make_http_response(Client *client)
+{
+	/* TODO: read information from client struct */
+	int rc;
+	char datetime[MAX_DATETIME_LENGTH];
 
 	// get datetime
 	memset(datetime, 0, MAX_DATETIME_LENGTH);
 	rc = get_datetime(datetime);
 
+
 	// serve file
-	if (header->method == 1) // 1 is GET
+	if (client->header->method == 1) // 1 is GET
 	{
-		char *file_buffer = NULL;
+		char *file_buffer = NULL;/* TODO: read from socket, fill the information to client struct, get client ip address */
 		char path[MAX_SZ];
 		size_t file_size;
 
-		sprintf(path, "./html%s", header->url);
+		sprintf(path, "./html%s", client->header->url);
 		printf("PATH: %s\n", path);
 		file_buffer = read_file(path, &file_size);
 
 		if (file_buffer == NULL)
 		{
-			write(msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+			write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
 			printf("404 Not Found\n");
 		}
 		else
@@ -151,7 +175,7 @@ int make_response(int msgsock, char *buffer, int size)
 			sprintf(buf, HTTP_RESPONSE_TEMPLATE, file_size, datetime, file_buffer);
 
 			printf("SEND: \n----------\n%s\n----------\n", buf);
-			write(msgsock, buf, sizeof(buf));
+			write(client->msgsock, buf, sizeof(buf));
 		}
 
 		// safely free file buffer
@@ -162,24 +186,23 @@ int make_response(int msgsock, char *buffer, int size)
 
 	}
 
-
-	free(header);
 	return 0;
 }
 
 void handle_request(int msgsock)
 {
-	int sz;
-	char buffer[MAX_SZ];
+	Client *client = (Client *) malloc(sizeof(Client));
 
-	memset(buffer, 0, MAX_SZ);
+	client->msgsock = msgsock;
 
-	sz = read(msgsock, buffer, MAX_SZ);
-	printf("RECV:\n----------\n%s\n----------\n", buffer);
+	get_peer_information(client);
 
-	make_response(msgsock, buffer, sz);
+	read_http_request(client);
 
+	make_http_response(client);
 
+	free(client->header);
+	free(client);
 	close(msgsock);
 }
 
