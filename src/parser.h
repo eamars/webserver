@@ -17,5 +17,6 @@ typedef struct
 } http_header_t;
 
 int parse(http_header_t *header, char *buf, int size);
+const char *get_http_code_description(int code);
 
 #endif

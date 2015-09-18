@@ -12,8 +12,15 @@ typedef struct {
 
 // get client connection information
 void get_peer_information(Client *client);
+
+// read html from file
 char *read_file(char *path, size_t *file_size);
+char *read_file_stdio(char *path, size_t *file_size);
+
+// read http request from socket
 int read_http_request(Client *client);
+
+// send http response to client
 int make_http_response(Client *client);
 
 

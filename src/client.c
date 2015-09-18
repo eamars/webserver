@@ -16,13 +16,11 @@
 #define MAX_SZ 8192
 
 const char *HTTP_RESPONSE_TEMPLATE =
-"HTTP/1.1 200 OK\r\n"
+"HTTP/1.1 %d %s\r\n"
 "Server: webhttpd/1.0\r\n"
 "Connection: close\r\n"
 "Content-Length %ld\r\n"
 "Date: %s\r\n"
-"\r\n"
-"%s\r\n"
 "\r\n";
 
 const char *HTTP_RESPONSE_404 =
@@ -94,6 +92,44 @@ char *read_file(char *path, size_t *file_size)
 	return file_buffer;
 }
 
+char *read_file_stdio(char *path, size_t *file_size)
+{
+	FILE *fp = NULL;
+
+
+	// open file
+	fp = fopen(path, "r");
+	if (fp == NULL)
+	{
+		perror("open");
+		return NULL;
+	}
+
+	// read file
+	int sz;
+	char *file_buffer = NULL;
+	char strbuf[4096];
+	*file_size = 0;
+
+	memset(strbuf, 0, 4096);
+	while (fgets(strbuf, 4096, fp) != NULL)
+	{
+
+		// append
+        sz = strlen(strbuf);
+		file_buffer = realloc(file_buffer, *file_size + sz + 1);
+		memcpy(file_buffer + *file_size, strbuf, sz);
+		*file_size += sz;
+        file_buffer[*file_size] = 0;
+
+
+		memset(strbuf, 0, 4096);
+	}
+	fclose(fp);
+
+	return file_buffer;
+}
+
 int read_http_request(Client *client)
 {
 	int sz;
@@ -118,6 +154,7 @@ int read_http_request(Client *client)
 	return sz;
 }
 
+
 int make_http_response(Client *client)
 {
 	/* TODO: read information from client struct */
@@ -135,6 +172,7 @@ int make_http_response(Client *client)
 		char *file_buffer = NULL;/* TODO: read from socket, fill the information to client struct, get client ip address */
 		char path[MAX_SZ];
 		size_t file_size;
+        int http_code = 200;
 
 		sprintf(path, "./html%s", client->header->url);
 		printf("PATH: %s\n", path);
@@ -142,18 +180,42 @@ int make_http_response(Client *client)
 
 		if (file_buffer == NULL)
 		{
-			write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
-			printf("404 Not Found\n");
-		}
-		else
-		{
-			char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
-			memset(buf, 0, sizeof(buf));
-			sprintf(buf, HTTP_RESPONSE_TEMPLATE, file_size, datetime, file_buffer);
+            http_code = 404;
+            file_buffer = read_file("./html/404.html", &file_size);
 
-			printf("SEND: \n----------\n%s\n----------\n", buf);
-			write(client->msgsock, buf, sizeof(buf));
+            // NO! We should have 404 page sit somewhere
+            if (file_buffer == NULL)
+            {
+                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+    			printf("404 Not Found\n");
+                return http_code;
+            }
+
 		}
+
+		char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
+        size_t readable_length;
+
+        memset(buf, 0, sizeof(buf));
+
+        // create http header
+		sprintf(buf,
+            HTTP_RESPONSE_TEMPLATE, // template
+            http_code,
+            get_http_code_description(http_code),
+            file_size,
+            datetime);
+        readable_length = strlen(buf);
+
+        // append binary data (possible) to the end of header
+        memcpy(buf + readable_length, file_buffer, file_size);
+
+        // append \r\n at the end
+        memcpy(buf + readable_length + file_size, "\r\n", 3);
+
+		printf("SEND: \n----------\n%s\n----------\n", buf);
+		write(client->msgsock, buf, sizeof(buf));
+
 
 		// safely free file buffer
 		if (file_buffer != NULL)

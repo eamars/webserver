@@ -51,7 +51,7 @@ int http_headers_complete_cb(http_parser* p)
 {
     assert(((http_header_t *) p->data)->num_values == ((http_header_t *) p->data)->num_fields);
     ((http_header_t *) p->data)->method = p->method;
-    
+
     return 0;
 }
 
@@ -89,4 +89,21 @@ int parse(http_header_t *header, char *buf, int size)
 
     free(parser);
     return parsed;
+}
+
+const char *HTTP_404_CODE = "Not Found";
+const char *HTTP_200_CODE = "OK";
+const char *HTTP_UNKNOWN_CODE = "Known";
+
+const char *get_http_code_description(int code)
+{
+    switch (code)
+    {
+        case 200:
+            return HTTP_200_CODE;
+        case 404:
+            return HTTP_404_CODE;
+        default:
+            return HTTP_UNKNOWN_CODE;
+    }
 }
