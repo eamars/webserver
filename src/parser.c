@@ -28,10 +28,10 @@ int http_body_cb(http_parser* p, const char *at, size_t length)
 int http_header_field_cb(http_parser* p, const char *at, size_t length)
 {
     static int i = 0;
-    char *field = ((http_header_t *) p->data)->field[i];
+    char *fields = ((http_header_t *) p->data)->fields[i];
     ((http_header_t *) p->data)->num_fields = i;
-    memset(field, 0, FIELD_SZ);
-    strncpy(field, at, length);
+    memset(fields, 0, FIELD_SZ);
+    strncpy(fields, at, length);
     i++;
     return 0;
 }
@@ -39,10 +39,10 @@ int http_header_field_cb(http_parser* p, const char *at, size_t length)
 int http_header_value_cb(http_parser* p, const char *at, size_t length)
 {
     static int i = 0;
-    char *value = ((http_header_t *) p->data)->value[i];
+    char *values = ((http_header_t *) p->data)->values[i];
     ((http_header_t *) p->data)->num_values = i;
-    memset(value, 0, FIELD_SZ);
-    strncpy(value, at, length);
+    memset(values, 0, FIELD_SZ);
+    strncpy(values, at, length);
     i++;
     return 0;
 }

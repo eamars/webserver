@@ -9,8 +9,8 @@ typedef struct
 {
     char url[FIELD_SZ];
     char body[FIELD_SZ];
-    char field[MAX_NUM_FIELD][FIELD_SZ];
-    char value[MAX_NUM_FIELD][FIELD_SZ];
+    char fields[MAX_NUM_FIELD][FIELD_SZ];
+    char values[MAX_NUM_FIELD][FIELD_SZ];
     unsigned int method;
     int num_fields;
     int num_values;

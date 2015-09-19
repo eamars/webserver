@@ -8,20 +8,23 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <http_parser.h>
+#include <sys/wait.h>
 
 #include "client.h"
 #include "datetime.h"
 #include "parser.h"
 
 #define MAX_SZ 8192
+#define READ_SZ 4096
+#define MAX_QUERY_SZ 255
 
 const char *HTTP_RESPONSE_TEMPLATE =
 "HTTP/1.1 %d %s\r\n"
 "Server: webhttpd/1.0\r\n"
 "Connection: close\r\n"
 "Content-Length %ld\r\n"
-"Date: %s\r\n"
-"\r\n";
+"Date: %s\r\n";
 
 const char *HTTP_RESPONSE_404 =
 "HTTP/1.1 404 Not Found\r\n"
@@ -89,11 +92,11 @@ char *read_file(char *path, size_t *file_size)
 	// read file
 	int sz;
 	char *file_buffer = NULL;
-	char strbuf[4096];
+	char strbuf[READ_SZ];
 	*file_size = 0;
 
-	memset(strbuf, 0, 4096);
-	while ((sz = read(fd, strbuf, 4096)) != 0)
+	memset(strbuf, 0, READ_SZ);
+	while ((sz = read(fd, strbuf, READ_SZ)) != 0)
 	{
 		if (sz < 0)
 		{
@@ -106,7 +109,7 @@ char *read_file(char *path, size_t *file_size)
 		memcpy(file_buffer + *file_size, strbuf, sz);
 		*file_size += sz;
 
-		memset(strbuf, 0, 4096);
+		memset(strbuf, 0, READ_SZ);
 	}
 	close(fd);
 
@@ -129,11 +132,11 @@ char *read_file_stdio(char *path, size_t *file_size)
 	// read file
 	int sz;
 	char *file_buffer = NULL;
-	char strbuf[4096];
+	char strbuf[READ_SZ];
 	*file_size = 0;
 
-	memset(strbuf, 0, 4096);
-	while (fgets(strbuf, 4096, fp) != NULL)
+	memset(strbuf, 0, READ_SZ);
+	while (fgets(strbuf, READ_SZ, fp) != NULL)
 	{
 
 		// append
@@ -144,7 +147,7 @@ char *read_file_stdio(char *path, size_t *file_size)
         file_buffer[*file_size] = 0;
 
 
-		memset(strbuf, 0, 4096);
+		memset(strbuf, 0, READ_SZ);
 	}
 	fclose(fp);
 
@@ -190,7 +193,7 @@ int http_response_get(Client *client)
 	rc = get_datetime(datetime);
 
     // get html path
-    sprintf(path, "./html%s", client->header->url);
+    sprintf(path, "html%s", client->header->url);
     printf("HTTP_PATH: %s\n", path);
 
     // try to read file
@@ -200,7 +203,7 @@ int http_response_get(Client *client)
     if (file_buffer == NULL)
     {
         http_code = 404;
-        file_buffer = read_file("./html/404.html", &file_size);
+        file_buffer = read_file("html/404.html", &file_size);
 
         // NO! We should have 404 page sit somewhere
         if (file_buffer == NULL)
@@ -227,6 +230,9 @@ int http_response_get(Client *client)
         get_http_code_description(http_code),
         file_size,
         datetime);
+
+    strncat(buf, "\r\n", 2);
+
     readable_length = strlen(buf);
 
     // append binary data (possible) to the end of header
@@ -247,9 +253,113 @@ int http_response_get(Client *client)
     return http_code;
 }
 
-char *execute_cgi(char *path, size_t *output_size)
+char *execute_cgi(char *path, size_t *output_size, Client *client)
 {
-    return NULL;
+    int input_fd[2];
+    int output_fd[2];
+    int pid;
+    int status;
+    char *output_buffer = NULL;
+    int content_length = -1;
+
+    // get content length
+    for (int i = 0; i < client->header->num_fields; i++)
+    {
+        if (strcasecmp(client->header->fields[i], "Content-Length") == 0)
+        {
+            content_length = atoi(client->header->values[i]);
+            break;
+        }
+    }
+    if (content_length == -1)
+    {
+        fprintf(stderr, "Unable to http request header error: not a valid Content-Length");
+        return NULL;
+    }
+
+    // open pipe for executing cgi script
+    if (pipe(input_fd) < 0 || pipe(output_fd) < 0)
+    {
+        perror("pipe");
+        return NULL;
+    }
+
+    pid = fork();
+    if (pid < 0)
+    {
+        perror("fork");
+        return NULL;
+    }
+    else if (pid == 0)
+    {
+        // child code
+        char method_env[MAX_QUERY_SZ];
+        char query_env[MAX_QUERY_SZ];
+        char length_env[MAX_QUERY_SZ];
+
+        // copy query
+        // TODO: GET and POST are able to execute cgi script. I need to extract query
+        // start with ?
+        sprintf(method_env, "REQUEST_METHOD=%s", http_method_str(client->header->method));
+        putenv(method_env);
+
+        
+        sprintf(query_env, "QUERY_STRING=%s", "");
+        putenv(query_env);
+
+        sprintf(length_env, "CONTENT_LENGTH=%d", content_length);
+        putenv(length_env);
+
+
+        // redirect pipe
+        dup2(output_fd[1], STDOUT_FILENO);
+        dup2(input_fd[0], STDIN_FILENO);
+        close(output_fd[0]);
+        close(input_fd[1]);
+
+        execl(path, path, NULL);
+        perror("execl");
+        exit(-1);
+    }
+    else
+    {
+        // parent code
+        char strbuf[READ_SZ];
+    	*output_size = 0;
+        int sz;
+
+        // close pipe
+        close(output_fd[1]);
+        close(input_fd[0]);
+
+        // write form data to CGI
+        write(input_fd[1], client->header->body, strlen(client->header->body));
+
+        // wait for child to complete
+        waitpid(pid, &status, 0);
+
+    	memset(strbuf, 0, READ_SZ);
+    	while ((sz = read(output_fd[0], strbuf, READ_SZ)) != 0)
+    	{
+    		if (sz < 0)
+    		{
+    			perror("read");
+    			return NULL;
+    		}
+
+    		// append
+    		output_buffer = realloc(output_buffer, *output_size + sz);
+    		memcpy(output_buffer + *output_size, strbuf, sz);
+    		*output_size += sz;
+
+    		memset(strbuf, 0, READ_SZ);
+    	}
+    	close(output_fd[0]);
+        close(input_fd[1]);
+    }
+
+    return output_buffer;
+
 }
 int http_response_post(Client *client)
 {
@@ -265,11 +375,11 @@ int http_response_post(Client *client)
 	rc = get_datetime(datetime);
 
     // get cgi path
-    sprintf(path, "./html%s", client->header->url);
+    sprintf(path, "html%s", client->header->url);
     printf("CGI_PATH: %s\n", path);
 
     // execute cgi script
-    output_buffer = execute_cgi(path, &output_size);
+    output_buffer = execute_cgi(path, &output_size, client);
 
     // failed to execute
     if (output_buffer == NULL)
@@ -295,6 +405,10 @@ int http_response_post(Client *client)
         get_http_code_description(http_code),
         output_size,
         datetime);
+
+    // header may not yet complete so we dont need to terminate header
+    //strncat(buf, "\r\n", 2);
+
     readable_length = strlen(buf);
 
     // append binary data (possible) to the end of header

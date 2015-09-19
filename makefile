@@ -4,7 +4,7 @@
 
 # Definitions for compiler and other flags
 CC = clang
-CFLAGS = -Os -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter -g -std=c99 -D_GNU_SOURCE
+CFLAGS = -Os -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter -Wno-unused-variable -g -std=c99 -D_GNU_SOURCE
 INCLUDE = -I./include -I./src
 LD_LIBS = lib/http_parser.o -lpthread
 DEL = rm
@@ -14,7 +14,7 @@ PROG_OBJ = src/main.o src/config.o src/parser.o src/datetime.o src/client.o
 
 # Targets
 default: src/webhttpd.out
-test: test/parser.out test/cgi.out test/datetime.out
+test: test/parser.out test/cgi.out test/datetime.out test/cgi.out
 all: default test
 
 
@@ -38,6 +38,7 @@ test/cgi.out: test/cgi.o
 
 test/datetime.out: test/datetime.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
+
 
 # Others
 .PHONY: clean
