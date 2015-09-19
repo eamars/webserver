@@ -93,6 +93,8 @@ int parse(http_header_t *header, char *buf, int size)
 
 const char *HTTP_404_CODE = "Not Found";
 const char *HTTP_200_CODE = "OK";
+const char *HTTP_501_CODE = "Method Not Implemented";
+const char *HTTP_500_CODE = "Internal Server Error";
 const char *HTTP_UNKNOWN_CODE = "Known";
 
 const char *get_http_code_description(int code)
@@ -103,6 +105,10 @@ const char *get_http_code_description(int code)
             return HTTP_200_CODE;
         case 404:
             return HTTP_404_CODE;
+        case 500:
+            return HTTP_500_CODE;
+        case 501:
+            return HTTP_501_CODE;
         default:
             return HTTP_UNKNOWN_CODE;
     }

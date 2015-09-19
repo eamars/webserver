@@ -25,8 +25,29 @@ const char *HTTP_RESPONSE_TEMPLATE =
 
 const char *HTTP_RESPONSE_404 =
 "HTTP/1.1 404 Not Found\r\n"
+"Content-Type: text/html\r\n"
 "\r\n"
-"404 - Page Not Found\r\n"
+"<HTML><TITLE>404</TITLE>\r\n"
+"<BODY><P>404 - Page Not Found</P></BODY>\r\n"
+"</HTML>\r\n"
+"\r\n";
+
+const char *HTTP_RESPONSE_501 =
+"HTTP/1.1 501 Method Not Implemented\r\n"
+"Content-Type: text/html\r\n"
+"\r\n"
+"<HTML><TITLE>501</TITLE>\r\n"
+"<BODY><P>501 - Method Not Implemented</P></BODY>\r\n"
+"</HTML>\r\n"
+"\r\n";
+
+const char *HTTP_RESPONSE_500 =
+"HTTP/1.1 500 Internal Server Error\r\n"
+"Content-Type: text/html\r\n"
+"\r\n"
+"<HTML><TITLE>500</TITLE>\r\n"
+"<BODY><P>500 - Internal Server Error</P></BODY>\r\n"
+"</HTML>\r\n"
 "\r\n";
 
 
@@ -155,73 +176,178 @@ int read_http_request(Client *client)
 }
 
 
-int make_http_response(Client *client)
+int http_response_get(Client *client)
 {
-	/* TODO: read information from client struct */
-	int rc;
-	char datetime[MAX_DATETIME_LENGTH];
+    int rc;
+    int http_code = 0;
+    char datetime[MAX_DATETIME_LENGTH];
+    char path[MAX_SZ];
+    char *file_buffer = NULL;
+    size_t file_size;
 
-	// get datetime
+    // get datetime
 	memset(datetime, 0, MAX_DATETIME_LENGTH);
 	rc = get_datetime(datetime);
 
+    // get html path
+    sprintf(path, "./html%s", client->header->url);
+    printf("HTTP_PATH: %s\n", path);
 
+    // try to read file
+    file_buffer = read_file(path, &file_size);
+
+    // page not found
+    if (file_buffer == NULL)
+    {
+        http_code = 404;
+        file_buffer = read_file("./html/404.html", &file_size);
+
+        // NO! We should have 404 page sit somewhere
+        if (file_buffer == NULL)
+        {
+            write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+            printf("HTTP_CODE: 501\n");
+            return http_code;
+        }
+
+    }
+
+    http_code = 200;
+
+    // response http_packet
+    char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
+    size_t readable_length;
+
+    memset(buf, 0, sizeof(buf));
+
+    // create http header
+    sprintf(buf,
+        HTTP_RESPONSE_TEMPLATE, // template
+        http_code,
+        get_http_code_description(http_code),
+        file_size,
+        datetime);
+    readable_length = strlen(buf);
+
+    // append binary data (possible) to the end of header
+    memcpy(buf + readable_length, file_buffer, file_size);
+
+    // append \r\n at the end
+    memcpy(buf + readable_length + file_size, "\r\n", 3);
+
+    write(client->msgsock, buf, sizeof(buf));
+
+
+    // safely free file buffer
+    if (file_buffer != NULL)
+    {
+        free(file_buffer);
+    }
+
+    return http_code;
+}
+
+char *execute_cgi(char *path, size_t *output_size)
+{
+    return NULL;
+}
+int http_response_post(Client *client)
+{
+    int rc;
+    int http_code = 0;
+    char datetime[MAX_DATETIME_LENGTH];
+    char path[MAX_SZ];
+    char *output_buffer = NULL;
+    size_t output_size;
+
+    // get datetime
+	memset(datetime, 0, MAX_DATETIME_LENGTH);
+	rc = get_datetime(datetime);
+
+    // get cgi path
+    sprintf(path, "./html%s", client->header->url);
+    printf("CGI_PATH: %s\n", path);
+
+    // execute cgi script
+    output_buffer = execute_cgi(path, &output_size);
+
+    // failed to execute
+    if (output_buffer == NULL)
+    {
+        http_code = 500;
+        write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
+        printf("HTTP_CODE: 500\n");
+        return http_code;
+    }
+
+    http_code = 200;
+
+    // response http_packet
+    char buf[output_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
+    size_t readable_length;
+
+    memset(buf, 0, sizeof(buf));
+
+    // create http header
+    sprintf(buf,
+        HTTP_RESPONSE_TEMPLATE, // template
+        http_code,
+        get_http_code_description(http_code),
+        output_size,
+        datetime);
+    readable_length = strlen(buf);
+
+    // append binary data (possible) to the end of header
+    memcpy(buf + readable_length, output_buffer, output_size);
+
+    // append \r\n at the end
+    memcpy(buf + readable_length + output_size, "\r\n", 3);
+
+    write(client->msgsock, buf, sizeof(buf));
+
+
+    // safely free file buffer
+    if (output_buffer != NULL)
+    {
+        free(output_buffer);
+    }
+
+    return http_code;
+}
+
+int http_response_default(Client *client)
+{
+    int http_code = 0;
+
+    http_code = 501;
+    write(client->msgsock, HTTP_RESPONSE_501, strlen(HTTP_RESPONSE_501));
+    printf("501 Method Not Implemented\n");
+    return http_code;
+}
+
+int make_http_response(Client *client)
+{
 	// serve file
-	if (client->header->method == 1) // 1 is GET
-	{
-		char *file_buffer = NULL;/* TODO: read from socket, fill the information to client struct, get client ip address */
-		char path[MAX_SZ];
-		size_t file_size;
-        int http_code = 200;
+    switch (client->header->method)
+    {
 
-		sprintf(path, "./html%s", client->header->url);
-		printf("PATH: %s\n", path);
-		file_buffer = read_file(path, &file_size);
+    	case 1: // 1 is GET
+    	{
+            http_response_get(client);
+            break;
+        }
 
-		if (file_buffer == NULL)
-		{
-            http_code = 404;
-            file_buffer = read_file("./html/404.html", &file_size);
+        case 3: // 3 is POST
+        {
+            http_response_post(client);
+            break;
+        }
 
-            // NO! We should have 404 page sit somewhere
-            if (file_buffer == NULL)
-            {
-                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
-    			printf("404 Not Found\n");
-                return http_code;
-            }
-
-		}
-
-		char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
-        size_t readable_length;
-
-        memset(buf, 0, sizeof(buf));
-
-        // create http header
-		sprintf(buf,
-            HTTP_RESPONSE_TEMPLATE, // template
-            http_code,
-            get_http_code_description(http_code),
-            file_size,
-            datetime);
-        readable_length = strlen(buf);
-
-        // append binary data (possible) to the end of header
-        memcpy(buf + readable_length, file_buffer, file_size);
-
-        // append \r\n at the end
-        memcpy(buf + readable_length + file_size, "\r\n", 3);
-
-		printf("SEND: \n----------\n%s\n----------\n", buf);
-		write(client->msgsock, buf, sizeof(buf));
-
-
-		// safely free file buffer
-		if (file_buffer != NULL)
-		{
-			free(file_buffer);
-		}
+        default: // unimplemented
+        {
+            http_response_default(client);
+            break;
+        }
 
 	}
 
