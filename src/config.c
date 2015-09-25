@@ -17,6 +17,7 @@ struct node_s
 // the structrue of config is only visable whtin config module
 struct configuration_ini_style
 {
+	char *path;
 	Node *config_bst;
 };
 
@@ -247,26 +248,33 @@ static int scanner(Configuration *config, FILE *fp)
 	return 0;
 }
 
-Configuration *config_init(void)
+Configuration *config_init(char *path)
 {
-	return (Configuration *) malloc (sizeof(Configuration));
+	Configuration *config = (Configuration *) malloc (sizeof(Configuration));
+	config->config_bst = NULL;
+	config->path = (char *) malloc (strlen(path) + 1);
+	memset(config->path, 0, strlen(path) + 1);
+	strcpy(config->path, path);
+
+	return config;
 }
 
 void config_destroy(Configuration *config)
 {
-	free_nodes(config->config_bst);
 	if (config != NULL)
 	{
+		free_nodes(config->config_bst);
+		free(config->path);
 		free(config);
 	}
 }
 
-int config_load(Configuration *config, char *cname)
+int config_load(Configuration *config)
 {
 	FILE *fp;
 	int ret;
 
-	if ((fp = fopen(cname, "r")) == NULL)
+	if ((fp = fopen(config->path, "r")) == NULL)
 	{
 		// Failed to open file
 		return -1;
@@ -288,6 +296,11 @@ int config_get_value(Configuration *config, char *key, char *value)
 {
 	// perform an inorder search
 	return search(config->config_bst, key, value);
+}
+
+const char *config_get_path(Configuration *config)
+{
+	return config->path;
 }
 
 char **split_create(const char *src, char token)

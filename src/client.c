@@ -10,10 +10,12 @@
 #include <sys/stat.h>
 #include <http_parser.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include "client.h"
 #include "datetime.h"
 #include "parser.h"
+#include "config.h"
 
 #define MAX_SZ 8192
 #define READ_SZ 4096
@@ -179,12 +181,14 @@ int read_http_request(Client *client)
 }
 
 
-int http_response_get(Client *client)
+int http_response_get(Configuration *config, Client *client)
 {
     int rc;
     int http_code = 0;
     char datetime[MAX_DATETIME_LENGTH];
     char path[MAX_SZ];
+    char default_dir[MAX_VALUE_LEN];
+    char value[MAX_VALUE_LEN];
     char *file_buffer = NULL;
     size_t file_size;
 
@@ -192,30 +196,58 @@ int http_response_get(Client *client)
 	memset(datetime, 0, MAX_DATETIME_LENGTH);
 	rc = get_datetime(datetime);
 
+    // get default dir
+    memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "default_dir", default_dir);
+
     // get html path
-    sprintf(path, "html%s", client->header->url);
+    sprintf(path, "%s%s", default_dir, client->header->url);
+
     printf("HTTP_PATH: %s\n", path);
 
     // try to read file
     file_buffer = read_file(path, &file_size);
 
+    http_code = 200;
+
     // page not found
     if (file_buffer == NULL)
     {
-        http_code = 404;
-        file_buffer = read_file("html/404.html", &file_size);
-
-        // NO! We should have 404 page sit somewhere
-        if (file_buffer == NULL)
+        if (errno == EISDIR)
         {
-            write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
-            printf("HTTP_CODE: 501\n");
-            return http_code;
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_index_page", value);
+            sprintf(path, "%s%s%s", default_dir, client->header->url, value);
+            printf("HTTP_PATH_FIX: %s\n", path);
+
+            file_buffer = read_file(path, &file_size);
         }
+        else
+        {
+            http_code = 404;
+            printf("HTTP_CODE: %d\n", http_code);
 
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_404_page", value);
+            if (!rc)
+            {
+                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+                printf("TRY1\n");
+                return http_code;
+            }
+            sprintf(path, "%s%s", default_dir, value);
+
+            file_buffer = read_file(path, &file_size);
+
+            // NO! We should have 404 page sit somewhere
+            if (file_buffer == NULL)
+            {
+                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+                printf("TRY2\n");
+                return http_code;
+            }
+        }
     }
-
-    http_code = 200;
 
     // response http_packet
     char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
@@ -303,7 +335,7 @@ char *execute_cgi(char *path, size_t *output_size, Client *client)
         sprintf(method_env, "REQUEST_METHOD=%s", http_method_str(client->header->method));
         putenv(method_env);
 
-        
+
         sprintf(query_env, "QUERY_STRING=%s", "");
         putenv(query_env);
 
@@ -361,12 +393,14 @@ char *execute_cgi(char *path, size_t *output_size, Client *client)
     return output_buffer;
 
 }
-int http_response_post(Client *client)
+int http_response_post(Configuration *config, Client *client)
 {
     int rc;
     int http_code = 0;
     char datetime[MAX_DATETIME_LENGTH];
     char path[MAX_SZ];
+    char default_dir[MAX_VALUE_LEN];
+    char value[MAX_VALUE_LEN];
     char *output_buffer = NULL;
     size_t output_size;
 
@@ -374,23 +408,59 @@ int http_response_post(Client *client)
 	memset(datetime, 0, MAX_DATETIME_LENGTH);
 	rc = get_datetime(datetime);
 
+    // get default dir
+    memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "default_dir", default_dir);
+
     // get cgi path
-    sprintf(path, "html%s", client->header->url);
+    sprintf(path, "%s%s", default_dir, client->header->url);
     printf("CGI_PATH: %s\n", path);
 
     // execute cgi script
     output_buffer = execute_cgi(path, &output_size, client);
 
+    http_code = 200;
+
     // failed to execute
     if (output_buffer == NULL)
     {
-        http_code = 500;
-        write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
-        printf("HTTP_CODE: 500\n");
-        return http_code;
+        if (errno == EISDIR)
+        {
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_index_page", value);
+            sprintf(path, "%s%s%s", default_dir, client->header->url, value);
+            printf("CGI_PATH_FIX: %s\n", path);
+
+            output_buffer = execute_cgi(path, &output_size, client);
+        }
+        else
+        {
+            http_code = 500;
+            printf("HTTP_CODE: %d\n", http_code);
+
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_500_page", value);
+            if (!rc)
+            {
+                write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
+                printf("TRY1\n");
+                return http_code;
+            }
+            sprintf(path, "%s%s", default_dir, value);
+
+            output_buffer = read_file(path, &output_size);
+
+            // NO! We should have 500 page sit somewhere
+            if (output_buffer == NULL)
+            {
+                write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
+                printf("TRY2\n");
+                return http_code;
+            }
+        }
     }
 
-    http_code = 200;
+
 
     // response http_packet
     char buf[output_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
@@ -429,7 +499,7 @@ int http_response_post(Client *client)
     return http_code;
 }
 
-int http_response_default(Client *client)
+int http_response_default(Configuration *config, Client *client)
 {
     int http_code = 0;
 
@@ -439,7 +509,7 @@ int http_response_default(Client *client)
     return http_code;
 }
 
-int make_http_response(Client *client)
+int make_http_response(Configuration *config, Client *client)
 {
 	// serve file
     switch (client->header->method)
@@ -447,19 +517,19 @@ int make_http_response(Client *client)
 
     	case 1: // 1 is GET
     	{
-            http_response_get(client);
+            http_response_get(config, client);
             break;
         }
 
         case 3: // 3 is POST
         {
-            http_response_post(client);
+            http_response_post(config, client);
             break;
         }
 
         default: // unimplemented
         {
-            http_response_default(client);
+            http_response_default(config, client);
             break;
         }
 

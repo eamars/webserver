@@ -3,6 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include "config.h"
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #define MAX_PATH_SZ 256
 
@@ -22,14 +27,13 @@ int main(int argc, char **argv)
 
     // try to read config file
     char config_path[MAX_PATH_SZ];
-    FILE *fp;
 
     sprintf(config_path, "%s/site-config", argv[1]);
     printf("config_path: %s\n", config_path);
 
     // create config object
     Configuration *config;
-    config = config_init();
+    config = config_init(config_path);
     if (config == NULL)
     {
         fprintf(stderr, "Unable to allocate memory\n");
@@ -37,7 +41,7 @@ int main(int argc, char **argv)
     }
 
     // load config from FILE
-    rc = config_load(config, config_path);
+    rc = config_load(config);
     if (rc < 0)
     {
         fprintf(stderr, "Unable to read configuration file: %s\n", config_path);
@@ -60,6 +64,12 @@ int main(int argc, char **argv)
     {
         printf("port: %d\n", atoi(value));
     }
+    memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "default_dir", value);
+    if (rc)
+    {
+        printf("default_dir: %s\n", value);
+    }
 
     memset(value, 0, MAX_VALUE_LEN);
     rc = config_get_value(config, "default_index_page", value);
@@ -75,7 +85,24 @@ int main(int argc, char **argv)
         printf("default_404_page: %s%s\n", argv[1], value);
     }
 
+    int fd;
+    fd = open(argv[1], O_RDONLY);
+    if (fd < 0)
+    {
+        perror("open");
+    }
 
+    char buf[128];
+    int sz;
+    sz = read(fd, buf, 127);
+    if (sz < 0)
+    {
+        perror("read");
+        if (errno == EISDIR)
+        {
+            printf("CATCH!\n");
+        }
+    }
 
 
     config_destroy(config);

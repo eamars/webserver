@@ -10,7 +10,7 @@ LD_LIBS = lib/http_parser.o -lpthread
 DEL = rm
 
 # Definitions for object
-PROG_OBJ = src/main.o src/config.o src/parser.o src/datetime.o src/client.o
+PROG_OBJ = src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/pidlock.o
 
 # Targets
 default: src/webhttpd.out

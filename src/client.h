@@ -2,6 +2,7 @@
 #define CLIENT_H_
 
 #include "parser.h"
+#include "config.h"
 
 typedef struct {
     pthread_t thread_id; // reserved for further use
@@ -21,7 +22,7 @@ char *read_file_stdio(char *path, size_t *file_size);
 int read_http_request(Client *client);
 
 // send http response to client
-int make_http_response(Client *client);
+int make_http_response(Configuration *config, Client *client);
 
 
 #endif

@@ -20,7 +20,7 @@
 typedef struct configuration_ini_style Configuration;
 
 // Allocate memory for Configuration class
-Configuration *config_init(void);
+Configuration *config_init(char *path);
 
 // Free memory for Configuration class
 void config_destroy(Configuration *config);
@@ -31,7 +31,7 @@ void config_destroy(Configuration *config);
  * @return 		: 0 for successfully load
  * 				: negative for failed to load
  */
-int config_load(Configuration *config, char *cname);
+int config_load(Configuration *config);
 
 /*
  * Always unload the resource when finish loading configs
@@ -45,6 +45,7 @@ int config_load(Configuration *config, char *cname);
  * 				: 0 for not found
  */
 int config_get_value(Configuration *config, char *key, char *value);
+const char *config_get_path(Configuration *config);
 
 /**
  * Creates a list of strings splited by given token. The list termianted by NULL
