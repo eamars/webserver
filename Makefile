@@ -14,7 +14,7 @@ PROG_OBJ = src/main.o src/config.o src/parser.o src/datetime.o src/client.o
 
 # Targets
 default: src/webhttpd.out
-test: test/parser.out test/cgi.out test/datetime.out test/cgi.out
+test: test/parser.out test/cgi.out test/datetime.out test/cgi.out test/site_package.out
 all: default test
 
 
@@ -39,6 +39,8 @@ test/cgi.out: test/cgi.o
 test/datetime.out: test/datetime.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
+test/site_package.out: test/site_package.o src/config.o
+	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 # Others
 .PHONY: clean

@@ -4,9 +4,7 @@
 #include <ctype.h> // provides isspace
 #include "config.h"
 
-#define MAX_KEY_LEN 512
-#define MAX_VALUE_LEN 512
-
+// for internal usage
 typedef struct node_s Node;
 struct node_s
 {
@@ -16,9 +14,11 @@ struct node_s
 	Node *right;
 };
 
-
-// Global variables
-static Node *config_bst;
+// the structrue of config is only visable whtin config module
+struct configuration_ini_style
+{
+	Node *config_bst;
+};
 
 static char *trim_whitespace(char *s)
 {
@@ -147,7 +147,7 @@ static int search(Node *head, char *key, char *value)
 
 }
 
-static int scanner(FILE *fp)
+static int scanner(Configuration *config, FILE *fp)
 {
 	int c;
 	int comment_flag = 0;
@@ -164,7 +164,7 @@ static int scanner(FILE *fp)
 	memset(value_buf, 0, sizeof(value_buf));
 
 	// Initilize bst
-	config_bst = NULL;
+	config->config_bst = NULL;
 
 	while ((c = fgetc(fp)) != EOF)
 	{
@@ -175,7 +175,7 @@ static int scanner(FILE *fp)
 			if (key_index != 0)
 			{
 				key_value_flag = 0;
-				config_bst = insert(config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
+				config->config_bst = insert(config->config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
 
 				memset(key_buf, 0, sizeof(key_buf));
 				memset(value_buf, 0, sizeof(value_buf));
@@ -194,7 +194,7 @@ static int scanner(FILE *fp)
 			// load to linked list
 			if (key_index != 0)
 			{
-				config_bst = insert(config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
+				config->config_bst = insert(config->config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
 			}
 
 			// Set to initial state
@@ -233,7 +233,7 @@ static int scanner(FILE *fp)
 	// still remained some in buffer
 	if (key_index != 0)
 	{
-		config_bst = insert(config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
+		config->config_bst = insert(config->config_bst, trim_whitespace(key_buf), trim_whitespace(value_buf));
 		// Set to initial state
 		memset(key_buf, 0, sizeof(key_buf));
 		memset(value_buf, 0, sizeof(value_buf));
@@ -247,8 +247,21 @@ static int scanner(FILE *fp)
 	return 0;
 }
 
+Configuration *config_init(void)
+{
+	return (Configuration *) malloc (sizeof(Configuration));
+}
 
-int config_open(char *cname)
+void config_destroy(Configuration *config)
+{
+	free_nodes(config->config_bst);
+	if (config != NULL)
+	{
+		free(config);
+	}
+}
+
+int config_load(Configuration *config, char *cname)
 {
 	FILE *fp;
 	int ret;
@@ -259,7 +272,7 @@ int config_open(char *cname)
 		return -1;
 	}
 
-	if ((ret = scanner(fp)) != 0)
+	if ((ret = scanner(config, fp)) != 0)
 	{
 		// Failed to read file
 		fclose(fp);
@@ -271,15 +284,10 @@ int config_open(char *cname)
 
 }
 
-void config_close()
-{
-	free_nodes(config_bst);
-}
-
-int config_get_value(char *key, char *value)
+int config_get_value(Configuration *config, char *key, char *value)
 {
 	// perform an inorder search
-	return search(config_bst, key, value);
+	return search(config->config_bst, key, value);
 }
 
 char **split_create(const char *src, char token)
