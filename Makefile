@@ -6,11 +6,11 @@
 CC = cc
 CFLAGS = -Os -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter -Wno-unused-variable -g -std=c99 -D_GNU_SOURCE
 INCLUDE = -I./include -I./src
-LD_LIBS = lib/http_parser.o -lpthread
+LD_LIBS = -lpthread
 DEL = rm
 
 # Definitions for object
-PROG_OBJ = src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/pidlock.o
+PROG_OBJ = src/http_parser.o src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/pidlock.o
 
 # Targets
 default: src/webhttpd.out
@@ -30,7 +30,7 @@ test/%.o: test/%.c $(DEPS)
 src/webhttpd.out: $(PROG_OBJ)
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
-test/parser.out: test/parser.o
+test/parser.out: test/parser.o src/http_parser.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 test/cgi.out: test/cgi.o
