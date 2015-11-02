@@ -60,6 +60,24 @@ const char *HTTP_RESPONSE_500 =
 "\r\n";
 
 
+// implementation for strnstr which is not available on linux
+char *strnstr(const char *s1, const char *s2, size_t len)
+{
+	size_t l2;
+
+	l2 = strlen(s2);
+	if (!l2)
+		return (char *)s1;
+	while (len >= l2) {
+		len--;
+		if (!memcmp(s1, s2, l2))
+			return (char *)s1;
+		s1++;
+	}
+	return NULL;
+}
+
+
 void get_peer_information(Client *client)
 {
     socklen_t len;
