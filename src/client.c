@@ -61,6 +61,7 @@ const char *HTTP_RESPONSE_500 =
 
 
 // implementation for strnstr which is not available on linux
+// source from https://github.com/torvalds/linux/blob/master/lib/string.c
 char *strnstr(const char *s1, const char *s2, size_t len)
 {
 	size_t l2;
