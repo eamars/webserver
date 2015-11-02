@@ -14,7 +14,7 @@ PROG_OBJ = src/http_parser.o src/webhttpd.o src/config.o src/parser.o src/dateti
 
 # Targets
 default: src/webhttpd.out
-test: test/parser.out test/cgi.out test/datetime.out test/cgi.out test/site_package.out
+test: test/parser.out test/cgi.out test/datetime.out test/cgi.out test/site_package.out test/http.out
 all: default test
 
 
@@ -40,6 +40,9 @@ test/datetime.out: test/datetime.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 test/site_package.out: test/site_package.o src/config.o
+	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
+
+test/http.out: test/http.o
 	$(CC) $(CFLAGS) $(LD_LIBS) $^ -o $@
 
 # Others
