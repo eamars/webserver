@@ -68,12 +68,8 @@ void handle_request(Configuration *config, int msgsock)
 
 	get_peer_information(client);
 
-	read_http_request(client);
+	handle_http_request(config, client);
 
-	make_http_response(config, client);
-
-	free(client->header);
-	free(client);
 	close(msgsock);
 }
 

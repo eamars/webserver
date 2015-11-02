@@ -17,6 +17,9 @@
 #include "parser.h"
 #include "config.h"
 
+#define handle_error(msg) \
+        do { perror(msg); exit(EXIT_FAILURE); } while (0)
+
 #define MAX_SZ 8192
 #define READ_SZ 4096
 #define MAX_QUERY_SZ 255
@@ -24,6 +27,7 @@
 const char *HTTP_RESPONSE_TEMPLATE =
 "HTTP/1.1 %d %s\r\n"
 "Server: webhttpd/1.0\r\n"
+"Cache-Control: no-cache, no-store, must-revalidate\r\n"
 "Connection: close\r\n"
 "Content-Length %ld\r\n"
 "Date: %s\r\n";
@@ -156,28 +160,122 @@ char *read_file_stdio(char *path, size_t *file_size)
 	return file_buffer;
 }
 
-int read_http_request(Client *client)
+void handle_http_request(Configuration *config, Client *client)
 {
-	int sz;
-	int rc;
-	char buffer[MAX_SZ];
+    int                 rc;
+    ssize_t 			sz;
+	size_t 				readed;
+	char 				buffer[READ_SZ];
+	char 				*data;
+	char 				*header_end;
+    ssize_t             content_length;
+
+    // init variables
+    content_length = -1;
+	readed = 0;
+	data = NULL;
+	header_end = NULL;
+	memset(buffer, 0, READ_SZ);
+
+    printf("IP: %s\n", client->ipstr);
+    while ((sz = read(client->msgsock, buffer, READ_SZ-1)) != 0)
+	{
+		if (sz < 0)
+		{
+			handle_error("read");
+		}
+		else
+		{
+			// try to find termination
+			header_end = strnstr(buffer, "\r\n\r\n", sz);
+
+			// if found, then append text before termination, process header
+			// if not found, append to data
+			if (header_end)
+			{
+				sz = header_end - buffer + 4;
+			}
+
+			// use realloc to increase size for variable length data
+			data = realloc(data, readed + sz + 1);
+
+			// copy downloaded data from buffer to data
+			memcpy(data + readed, buffer, sz);
+
+			// increase downloaded size
+			readed += sz;
+
+			// process header
+			if (header_end)
+			{
+				printf("RECV:\n----------\n%s\n----------\n", data);
+                // get http header
+            	http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
+
+                // parse http header
+            	rc = parse(header, data, sz);
+                client->header = header;
+
+                // extract payload
+                for (int i = 0; i < client->header->num_fields; i++)
+                {
+                    if (strcasecmp(client->header->fields[i], "Content-Length") == 0)
+                    {
+                        content_length = atoi(client->header->values[i]);
+                        break;
+                    }
+                }
+                if (content_length > 0)
+                {
+                    if (READ_SZ - sz >= content_length)
+                    {
+                        client->payload = malloc(content_length + 1);
+                        memcpy(client->payload, buffer + sz, content_length);
+                    }
+                    else
+                    {
+                        int remained;
+                        int copied;
+
+                        copied = READ_SZ - sz;
+                        remained = content_length - copied;
+
+                        client->payload = malloc(content_length + 1);
+                        memcpy(client->payload, buffer + sz, copied);
+
+                        char payload_buffer[remained + 1];
+
+                        // receive remained payload from socket
+                        sz = read(client->msgsock, payload_buffer, content_length);
+                        memcpy(client->payload + copied, payload_buffer, remained);
+                    }
+                }
+                else
+                {
+                    client->payload = NULL;
+                }
+
+                // clean up received header
+                free(data);
+
+                // make http response
+                make_http_response(config, client);
+
+                // clean up http response
+                free(client->header);
+                if (client->payload)
+                {
+                    free(client->payload);
+                }
+            	free(client);
 
 
-	memset(buffer, 0, MAX_SZ);
+                break;
+			}
 
-	sz = read(client->msgsock, buffer, MAX_SZ);
-	printf("IP: %s\n", client->ipstr);
-	printf("RECV:\n----------\n%s\n----------\n", buffer);
+		}
 
-	// get http header
-	http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
-
-	// parse http header
-	rc = parse(header, buffer, sz);
-
-	client->header = header;
-
-	return sz;
+	}
 }
 
 
@@ -335,7 +433,6 @@ char *execute_cgi(char *path, size_t *output_size, Client *client)
         sprintf(method_env, "REQUEST_METHOD=%s", http_method_str(client->header->method));
         putenv(method_env);
 
-
         sprintf(query_env, "QUERY_STRING=%s", "");
         putenv(query_env);
 
@@ -366,6 +463,7 @@ char *execute_cgi(char *path, size_t *output_size, Client *client)
 
         // write form data to CGI
         write(input_fd[1], client->header->body, strlen(client->header->body));
+        write(input_fd[1], client->payload, strlen(client->payload));
 
         // wait for child to complete
         waitpid(pid, &status, 0);
