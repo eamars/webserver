@@ -96,248 +96,113 @@ char *read_file(char *path, size_t *file_size)
     return file_buffer;
 }
 
-char *read_file_stdio(char *path, size_t *file_size)
+
+int http_response_get_method(Configuration *config, Client *client)
 {
-    FILE *fp = NULL;
-
-
-    // open file
-    fp = fopen(path, "r");
-    if (fp == NULL)
-    {
-        perror("open");
-        return NULL;
-    }
-
-    // read file
-    int sz;
-    char *file_buffer = NULL;
-    char strbuf[READ_SZ];
-    *file_size = 0;
-
-    memset(strbuf, 0, READ_SZ);
-    while (fgets(strbuf, READ_SZ, fp) != NULL)
-    {
-
-        // append
-        sz = strlen(strbuf);
-        file_buffer = realloc(file_buffer, *file_size + sz + 1);
-        memcpy(file_buffer + *file_size, strbuf, sz);
-        *file_size += sz;
-        file_buffer[*file_size] = 0;
-
-
-        memset(strbuf, 0, READ_SZ);
-    }
-    fclose(fp);
-
-    return file_buffer;
-}
-
-
-int http_response_get(Configuration *config, Client *client)
-{
-    int rc;
-    int http_code = 0;
-    char datetime[MAX_DATETIME_LENGTH];
-    char path[MAX_PATH_SZ];
-    char default_dir[MAX_VALUE_LEN];
-    char value[MAX_VALUE_LEN];
-    char *file_buffer = NULL;
-    size_t file_size;
-
-    // get datetime
-    memset(datetime, 0, MAX_DATETIME_LENGTH);
-    rc = get_datetime(datetime);
+    int                     rc;
+    char                    default_dir[MAX_VALUE_LEN];
+    char                    path[MAX_PATH_SZ];
+    char                    value[MAX_VALUE_LEN];
+    char                    *output_buffer = NULL;
+    int                     state = 1;
+    int                     http_code;
+    size_t                  output_size;
 
     // get default dir
-    memset(value, 0, MAX_VALUE_LEN);
+    memset(default_dir, 0, MAX_VALUE_LEN);
     rc = config_get_value(config, "default_dir", default_dir);
 
-    // get html path
-    sprintf(path, "%s%s", default_dir, client->header->url);
+    // get executable path
+    sprintf(path, "%s%s.py", default_dir, client->header->url);
+    printf("PYTHON_PATH: %s\n", path);
 
-    printf("HTTP_PATH: %s\n", path);
-
-    // try to read file
-    file_buffer = read_file(path, &file_size);
-
-    http_code = 200;
-
-    // page not found
-    if (file_buffer == NULL)
+    // execute python script
+    while (state != 0)
     {
-        if (errno == EISDIR)
+        if (state == 1) // first trial
         {
-            memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_index_page", value);
-            sprintf(path, "%s%s%s", default_dir, client->header->url, value);
-            printf("HTTP_PATH_FIX: %s\n", path);
-
-            file_buffer = read_file(path, &file_size);
-        }
-        else
-        {
-            http_code = 404;
-            printf("HTTP_CODE: %d\n", http_code);
-
-            memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_404_page", value);
-            if (!rc)
-            {
-                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
-                printf("TRY1\n");
-                return http_code;
-            }
-            sprintf(path, "%s%s", default_dir, value);
-
-            file_buffer = read_file(path, &file_size);
-
-            // NO! We should have 404 page sit somewhere
-            if (file_buffer == NULL)
-            {
-                write(client->msgsock, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
-                printf("TRY2\n");
-                return http_code;
-            }
-        }
-    }
-
-    // response http_packet
-    char buf[file_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
-    size_t readable_length;
-
-    memset(buf, 0, sizeof(buf));
-
-    // create http header
-    sprintf(buf,
-        HTTP_RESPONSE_TEMPLATE, // template
-        http_code,
-        get_http_code_description(http_code),
-        file_size,
-        datetime);
-
-    strncat(buf, "\r\n", 2);
-
-    readable_length = strlen(buf);
-
-    // append binary data (possible) to the end of header
-    memcpy(buf + readable_length, file_buffer, file_size);
-
-    // append \r\n at the end
-    memcpy(buf + readable_length + file_size, "\r\n", 3);
-
-    write(client->msgsock, buf, sizeof(buf));
-
-
-    // safely free file buffer
-    if (file_buffer != NULL)
-    {
-        free(file_buffer);
-    }
-
-    return http_code;
-}
-
-
-int http_response_post(Configuration *config, Client *client)
-{
-    int rc;
-    int http_code = 0;
-    char datetime[MAX_DATETIME_LENGTH];
-    char path[MAX_PATH_SZ];
-    char default_dir[MAX_VALUE_LEN];
-    char value[MAX_VALUE_LEN];
-    char *output_buffer = NULL;
-    size_t output_size;
-
-    // get datetime
-    memset(datetime, 0, MAX_DATETIME_LENGTH);
-    rc = get_datetime(datetime);
-
-    // get default dir
-    memset(value, 0, MAX_VALUE_LEN);
-    rc = config_get_value(config, "default_dir", default_dir);
-
-    // get cgi path
-    sprintf(path, "%s%s", default_dir, client->header->url);
-    printf("CGI_PATH: %s\n", path);
-
-    // execute cgi script
-    output_buffer = execute_cgi(path, &output_size, client);
-
-    http_code = 200;
-
-    // failed to execute
-    if (output_buffer == NULL)
-    {
-        if (errno == EISDIR)
-        {
-            memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_index_page", value);
-            sprintf(path, "%s%s%s", default_dir, client->header->url, value);
-            printf("CGI_PATH_FIX: %s\n", path);
-
-            output_buffer = execute_cgi(path, &output_size, client);
-        }
-        else
-        {
-            http_code = 500;
-            printf("HTTP_CODE: %d\n", http_code);
-
-            memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_500_page", value);
-            if (!rc)
-            {
-                write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
-                printf("TRY1\n");
-                return http_code;
-            }
-            sprintf(path, "%s%s", default_dir, value);
-
-            output_buffer = read_file(path, &output_size);
-
-            // NO! We should have 500 page sit somewhere
+            output_buffer = execute_python(path, &output_size, config, client);
             if (output_buffer == NULL)
             {
-                write(client->msgsock, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
-                printf("TRY2\n");
-                return http_code;
+                state = 2;
             }
+            else
+            {
+                state = 0;
+                http_code = 200;
+            }
+        }
+        else if (state == 2) // some error
+        {
+            if (errno == EINVAL) // invalid argument, not exist
+            {
+                state = 4; //404
+                http_code = 404;
+            }
+            else
+            {
+                state = 3; // 500
+                http_code = 500;
+            }
+        }
+        else if (state == 3)
+        {
+            // http 500 error
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_500_page", value);
+
+            // if 500 page doesn't exist, then use default 500 handler
+            if (!rc)
+            {
+                output_buffer = malloc(strlen(HTTP_RESPONSE_500) + 1);
+                output_size = strlen(HTTP_RESPONSE_500);
+                strncpy(output_buffer, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
+            }
+            else
+            {
+                sprintf(path, "%s%s", default_dir, value);
+                output_buffer = execute_python(path, &output_size, config, client);
+                if (output_buffer == NULL)
+                {
+                    output_buffer = malloc(strlen(HTTP_RESPONSE_500) + 1);
+                    output_size = strlen(HTTP_RESPONSE_500);
+                    strncpy(output_buffer, HTTP_RESPONSE_500, strlen(HTTP_RESPONSE_500));
+                }
+            }
+            break;
+        }
+        else if (state == 4)
+        {
+            // http 404 error
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_404_page", value);
+
+            // if 404 page doesn't exist, then use default 404 handler
+            if (!rc)
+            {
+                output_buffer = malloc(strlen(HTTP_RESPONSE_404) + 1);
+                output_size = strlen(HTTP_RESPONSE_404);
+                strncpy(output_buffer, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+            }
+            else
+            {
+                sprintf(path, "%s%s", default_dir, value);
+                output_buffer = execute_python(path, &output_size, config, client);
+                if (output_buffer == NULL)
+                {
+                    output_buffer = malloc(strlen(HTTP_RESPONSE_404) + 1);
+                    output_size = strlen(HTTP_RESPONSE_404);
+                    strncpy(output_buffer, HTTP_RESPONSE_404, strlen(HTTP_RESPONSE_404));
+                }
+            }
+            break;
         }
     }
 
+    // done processing file
+    printf("HTTP_CODE: %d\n", http_code);
+    write(client->msgsock, output_buffer, output_size);
 
-
-    // response http_packet
-    char buf[output_size + MAX_DATETIME_LENGTH + strlen(HTTP_RESPONSE_TEMPLATE) * 2];
-    size_t readable_length;
-
-    memset(buf, 0, sizeof(buf));
-
-    // create http header
-    sprintf(buf,
-        HTTP_RESPONSE_TEMPLATE, // template
-        http_code,
-        get_http_code_description(http_code),
-        output_size,
-        datetime);
-
-    // header may not yet complete so we dont need to terminate header
-    //strncat(buf, "\r\n", 2);
-
-    readable_length = strlen(buf);
-
-    // append binary data (possible) to the end of header
-    memcpy(buf + readable_length, output_buffer, output_size);
-
-    // append \r\n at the end
-    memcpy(buf + readable_length + output_size, "\r\n", 3);
-
-    write(client->msgsock, buf, sizeof(buf));
-
-
-    // safely free file buffer
     if (output_buffer != NULL)
     {
         free(output_buffer);
@@ -345,7 +210,6 @@ int http_response_post(Configuration *config, Client *client)
 
     return http_code;
 }
-
 
 int http_response_default(Configuration *config, Client *client)
 {
@@ -366,13 +230,13 @@ int make_http_response(Configuration *config, Client *client)
 
         case 1: // 1 is GET
         {
-            http_response_get(config, client);
+            http_response_get_method(config, client);
             break;
         }
 
         case 3: // 3 is POST
         {
-            http_response_post(config, client);
+            // TODO: implement http post
             break;
         }
 

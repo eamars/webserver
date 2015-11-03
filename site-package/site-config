@@ -11,7 +11,5 @@ server_port = 80
 default_dir = site-package
 
 # Default pages
-default_index_page = /index.html
-default_404_page = /404.html
-default_favicon_image = /favicon.ico
-default_robots_text = /robots.txt
+default_index_page = /index.py
+default_404_page = /404.py

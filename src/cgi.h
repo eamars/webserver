@@ -4,7 +4,6 @@
 
 #include "client.h"
 
-
-char *execute_cgi(char *path, size_t *output_size, Client *client);
+char *execute_python(char *path, size_t *output_size, Configuration *config, Client *client);
 
 #endif
