@@ -77,7 +77,6 @@ void handle_http_request(Configuration *config, Client *client)
     header_end = NULL;
     memset(buffer, 0, READ_SZ);
 
-    printf("IP: %s\n", client->ipstr);
     while ((sz = read(client->msgsock, buffer, READ_SZ-1)) != 0)
     {
         if (sz < 0)
@@ -108,7 +107,7 @@ void handle_http_request(Configuration *config, Client *client)
             // process header
             if (header_end)
             {
-                printf("RECV:\n----------\n%s\n----------\n", data);
+                printf("\n----------\nRECV [%s]:\n%s\n----------\n", client->ipstr, data);
                 // get http header
                 http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
 
