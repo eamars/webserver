@@ -102,11 +102,7 @@ int http_response_get_method(Configuration *config, Client *client)
     int                     rc;
     char                    default_dir[MAX_VALUE_LEN];
     char                    path[MAX_PATH_SZ];
-    char                    value[MAX_VALUE_LEN];
-    char                    *output_buffer = NULL;
-    int                     state = 1;
-    int                     http_code;
-    size_t                  output_size;
+    int                     error_code;
 
     // get default dir
     memset(default_dir, 0, MAX_VALUE_LEN);
@@ -114,21 +110,49 @@ int http_response_get_method(Configuration *config, Client *client)
 
     // get executable path
     sprintf(path, "%s%s.py", default_dir, client->header->url);
-    printf("PYTHON_PATH: %s\n", path);
 
-    http_code = execute_python(path, config, client);
+    error_code = execute_python(path, config, client);
 
-    return http_code;
+    if (error_code)
+    {
+        if (error_code == ENOENT)
+        {
+            sprintf(path, "%s%s.py", default_dir, "/404");
+            error_code = execute_python(path, config, client);
+        }
+        else if (error_code == EACCES)
+        {
+            sprintf(path, "%s%s.py", default_dir, "/500");
+            error_code = execute_python(path, config, client);
+        }
+        else
+        {
+            sprintf(path, "%s%s.py", default_dir, "/501");
+            error_code = execute_python(path, config, client);
+        }
+    }
+
+    return error_code;
 }
 
 int http_response_default(Configuration *config, Client *client)
 {
-    int http_code = 0;
+    int                     rc;
+    char                    default_dir[MAX_VALUE_LEN];
+    char                    path[MAX_PATH_SZ];
+    int                     error_code;
 
-    http_code = 501;
-    write(client->msgsock, HTTP_RESPONSE_501, strlen(HTTP_RESPONSE_501));
-    printf("501 Method Not Implemented\n");
-    return http_code;
+    // get default dir
+    memset(default_dir, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "default_dir", default_dir);
+
+    // get executable path
+    sprintf(path, "%s%s.py", default_dir, "/501");
+    printf("PYTHON_PATH: %s\n", path);
+
+    error_code = execute_python(path, config, client);
+
+    return error_code;
 }
 
 

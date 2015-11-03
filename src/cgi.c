@@ -30,6 +30,9 @@ int execute_python(char *path, Configuration *config, Client *client)
     int                 content_length = 0;
     int                 method;
 
+    // print path
+    printf("EXEC_PATH: %s\n", path);
+
     // HTTP get or post
     method = client->header->method;
 
@@ -90,7 +93,7 @@ int execute_python(char *path, Configuration *config, Client *client)
 
         execl(path, path, NULL);
         perror("execl");
-        exit(-1);
+        exit(errno);
     }
     else
     {
@@ -113,6 +116,12 @@ int execute_python(char *path, Configuration *config, Client *client)
         // wait for child to complete
         waitpid(pid, &status, 0);
 
+        // child has error occured
+        if (WIFEXITED(status) && WEXITSTATUS(status)) {
+            printf("STATUS: %d\n", WEXITSTATUS(status));
+            return WEXITSTATUS(status);
+        }
+
         memset(strbuf, 0, READ_SZ);
         while ((sz = read(output_fd[0], strbuf, READ_SZ)) != 0)
         {
@@ -124,11 +133,11 @@ int execute_python(char *path, Configuration *config, Client *client)
 
             // write to client
             write(client->msgsock, strbuf, sz);
-            printf("strbuf: %s\n", strbuf);
             memset(strbuf, 0, READ_SZ);
         }
         close(output_fd[0]);
         close(input_fd[1]);
+        return 0;
     }
     return 0;
 }
