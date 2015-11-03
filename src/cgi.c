@@ -49,15 +49,13 @@ int execute_python(char *path, Configuration *config, Client *client)
     // open pipe for executing cgi script
     if (pipe(input_fd) < 0 || pipe(output_fd) < 0)
     {
-        perror("pipe");
-        return 501;
+        handle_error("pipe");
     }
 
     pid = fork();
     if (pid < 0)
     {
-        perror("fork");
-        return 501;
+        handle_error("fork");
     }
     else if (pid == 0)
     {
@@ -83,7 +81,6 @@ int execute_python(char *path, Configuration *config, Client *client)
 
         sprintf(dir_env, "WORKING_DIR=%s", default_dir);
         putenv(dir_env);
-
 
         // redirect pipe
         dup2(output_fd[1], STDOUT_FILENO);
@@ -112,16 +109,6 @@ int execute_python(char *path, Configuration *config, Client *client)
             write(input_fd[1], client->payload, strlen(client->payload));
         }
 
-
-        // wait for child to complete
-        waitpid(pid, &status, 0);
-
-        // child has error occured
-        if (WIFEXITED(status) && WEXITSTATUS(status)) {
-            printf("STATUS: %d\n", WEXITSTATUS(status));
-            return WEXITSTATUS(status);
-        }
-
         memset(strbuf, 0, READ_SZ);
         while ((sz = read(output_fd[0], strbuf, READ_SZ)) != 0)
         {
@@ -135,6 +122,17 @@ int execute_python(char *path, Configuration *config, Client *client)
             write(client->msgsock, strbuf, sz);
             memset(strbuf, 0, READ_SZ);
         }
+
+        // wait for child to complete
+        waitpid(pid, &status, 0);
+
+        // child has error occured
+        if (WIFEXITED(status) && WEXITSTATUS(status)) {
+            printf("STATUS: %d\n", WEXITSTATUS(status));
+            return WEXITSTATUS(status);
+        }
+
+
         close(output_fd[0]);
         close(input_fd[1]);
         return 0;
