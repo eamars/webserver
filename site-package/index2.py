@@ -12,6 +12,7 @@ HEADER_TEMPLATE = \
 "Connection: keep-alive\r\n" \
 "Content-Type: text/html; charset=utf-8\r\n" \
 "Date: {}\r\n" \
+"\r\n\r\n"
 
 # Connection configuration for MySQL Connection
 SQL_CONFIG = {
