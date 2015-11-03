@@ -11,5 +11,7 @@ server_port = 80
 default_dir = site-package
 
 # Default pages
-default_index_page = /index.py
-default_404_page = /404.py
+default_index_page = /index
+default_404_page = /404
+default_500_page = /500
+default_501_page = /501

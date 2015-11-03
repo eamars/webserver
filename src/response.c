@@ -101,6 +101,7 @@ int http_response_get_method(Configuration *config, Client *client)
 {
     int                     rc;
     char                    default_dir[MAX_VALUE_LEN];
+    char                    value[MAX_VALUE_LEN];
     char                    path[MAX_PATH_SZ];
     int                     error_code;
 
@@ -117,17 +118,26 @@ int http_response_get_method(Configuration *config, Client *client)
     {
         if (error_code == ENOENT)
         {
-            sprintf(path, "%s%s.py", default_dir, "/404");
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_404_page", value);
+
+            sprintf(path, "%s%s.py", default_dir, value);
             error_code = execute_python(path, config, client);
         }
         else if (error_code == EACCES)
         {
-            sprintf(path, "%s%s.py", default_dir, "/500");
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_500_page", value);
+
+            sprintf(path, "%s%s.py", default_dir, value);
             error_code = execute_python(path, config, client);
         }
         else
         {
-            sprintf(path, "%s%s.py", default_dir, "/501");
+            memset(value, 0, MAX_VALUE_LEN);
+            rc = config_get_value(config, "default_501_page", value);
+
+            sprintf(path, "%s%s.py", default_dir, value);
             error_code = execute_python(path, config, client);
         }
     }
@@ -139,6 +149,7 @@ int http_response_default(Configuration *config, Client *client)
 {
     int                     rc;
     char                    default_dir[MAX_VALUE_LEN];
+    char                    value[MAX_VALUE_LEN];
     char                    path[MAX_PATH_SZ];
     int                     error_code;
 
@@ -147,9 +158,10 @@ int http_response_default(Configuration *config, Client *client)
     rc = config_get_value(config, "default_dir", default_dir);
 
     // get executable path
-    sprintf(path, "%s%s.py", default_dir, "/501");
-    printf("PYTHON_PATH: %s\n", path);
+    memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "default_501_page", value);
 
+    sprintf(path, "%s%s.py", default_dir, value);
     error_code = execute_python(path, config, client);
 
     return error_code;
