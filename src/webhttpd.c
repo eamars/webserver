@@ -4,7 +4,6 @@
 #include <netdb.h>
 #include <errno.h>
 #include <unistd.h>
-#include <http_parser.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -15,6 +14,7 @@
 #include "client.h"
 #include "config.h"
 #include "pidlock.h"
+#include "http_parser.h"
 
 
 static const char *usage = "webhttpd.out [\x1B[32mstart\033[0m|\x1B[32mstop\033[0m] site_package_folder";

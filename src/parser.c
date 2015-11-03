@@ -7,7 +7,7 @@
 #include <assert.h>
 
 #include "parser.h"
-#include <http_parser.h>
+#include "http_parser.h"
 
 int http_url_cb(http_parser* p, const char *at, size_t length)
 {
