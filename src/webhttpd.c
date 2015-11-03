@@ -16,7 +16,7 @@
 #include "config.h"
 #include "pidlock.h"
 
-#define MAX_PATH_SZ 256
+
 static const char *usage = "webhttpd.out [\x1B[32mstart\033[0m|\x1B[32mstop\033[0m] site_package_folder";
 
 int listen_on(int port)
