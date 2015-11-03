@@ -76,9 +76,9 @@ void handle_request(Configuration *config, int msgsock)
 void handle_fork(Configuration *config, int msgsock)
 {
 	int pid;
+	int status;
 
 	pid = fork();
-
 	if (pid < 0)
 	{
 		perror("fork");
@@ -99,6 +99,7 @@ int start(char *path)
 {
 	int pid;
 	int rc;
+	int status;
 
 	// let child to execute the job
 	pid = fork();
@@ -210,7 +211,7 @@ int main(int argc, char **argv)
 
 	/* Load configuration */
 	// ignore the return value from child
-	signal(SIGCHLD, SIG_IGN);
+	// signal(SIGCHLD, SIG_IGN);
 
 	// test if the user enter the correct arguments
     if (argc != 3)
