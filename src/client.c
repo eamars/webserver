@@ -77,7 +77,7 @@ void handle_http_request(Configuration *config, Client *client)
     header_end = NULL;
     memset(buffer, 0, READ_SZ);
 
-    while ((sz = read(client->msgsock, buffer, READ_SZ-1)) != 0)
+    while ((sz = read(client->msgsock, buffer, READ_SZ)) != 0)
     {
         if (sz < 0)
         {
