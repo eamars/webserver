@@ -3,7 +3,7 @@ webhttpd 2.0 - Yet Another Web Server
 
 [![Build Status](https://travis-ci.org/eamars/webserver.svg?branch=2.0)](https://travis-ci.org/eamars/webserver)
 
-###A simple HTTP server that provides minimal support of HTTP protocol.
+A simple HTTP server that provides minimal support of HTTP protocol.
 
 ####Version 1.0
 
