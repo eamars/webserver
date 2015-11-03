@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+import sys
+import os
+import datetime
+
+HEADER_TEMPLATE = \
+"HTTP/1.1 200 OK\r\n" \
+"Server: webhttpd/2.0\r\n" \
+"Cache-Control: no-cache, no-store, must-revalidate\r\n" \
+"Connection: kee-alive\r\n" \
+"Date: {}\r\n" \
+
 
 HTML = """
 <!DOCTYPE html>
@@ -120,5 +131,6 @@ HTML = """
 
 </body></html>
 """
-
-print(HTML)
+HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT"))
+sys.stdout.write(HEADER)
+sys.stdout.write(HTML)

@@ -20,7 +20,7 @@
 #include "cgi.h"
 
 
-char *execute_python(char *path, size_t *output_size, Configuration *config, Client *client)
+int execute_python(char *path, Configuration *config, Client *client)
 {
     int                 input_fd[2];
     int                 output_fd[2];
@@ -47,14 +47,14 @@ char *execute_python(char *path, size_t *output_size, Configuration *config, Cli
     if (pipe(input_fd) < 0 || pipe(output_fd) < 0)
     {
         perror("pipe");
-        return NULL;
+        return 501;
     }
 
     pid = fork();
     if (pid < 0)
     {
         perror("fork");
-        return NULL;
+        return 501;
     }
     else if (pid == 0)
     {
@@ -96,7 +96,6 @@ char *execute_python(char *path, size_t *output_size, Configuration *config, Cli
     {
         // parent code
         char strbuf[READ_SZ];
-        *output_size = 0;
         ssize_t sz;
 
         // close pipe
@@ -120,19 +119,16 @@ char *execute_python(char *path, size_t *output_size, Configuration *config, Cli
             if (sz < 0)
             {
                 perror("read");
-                return NULL;
+                return 501;
             }
 
-            // append
-            output_buffer = realloc(output_buffer, *output_size + sz);
-            memcpy(output_buffer + *output_size, strbuf, sz);
-            *output_size += sz;
-
+            // write to client
+            write(client->msgsock, strbuf, sz);
+            printf("strbuf: %s\n", strbuf);
             memset(strbuf, 0, READ_SZ);
         }
         close(output_fd[0]);
         close(input_fd[1]);
     }
-
-    return output_buffer;
+    return 0;
 }

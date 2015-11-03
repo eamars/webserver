@@ -3,6 +3,15 @@ import sys
 import os
 import mysql.connector
 
+import datetime
+
+HEADER_TEMPLATE = \
+"HTTP/1.1 200 OK\r\n" \
+"Server: webhttpd/2.0\r\n" \
+"Cache-Control: no-cache, no-store, must-revalidate\r\n" \
+"Connection: keep-alive\r\n" \
+"Date: {}\r\n" \
+
 # Connection configuration for MySQL Connection
 SQL_CONFIG = {
     "host": "192.168.2.5",
@@ -20,6 +29,8 @@ COL = """
         """
 
 def main():
+    sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT")))
+
     # Connect to server
     connection = mysql.connector.connect(**SQL_CONFIG)
 
@@ -39,7 +50,7 @@ def main():
         sys.stdout.write(col)
     sys.stdout.write("</tr>")
 
-    sql = "SELECT * FROM ZUOBIAO where ID < 10"
+    sql = "SELECT * FROM ZUOBIAO where ID < 40"
     cursor = connection.cursor()
     cursor.execute(sql)
 
@@ -48,6 +59,7 @@ def main():
         for row in result:
             sys.stdout.write("<td width=200>{}</td>".format(row))
         sys.stdout.write("</tr>\n")
+        sys.stdout.flush()
     sys.stdout.write("</table></body></html>")
 
 

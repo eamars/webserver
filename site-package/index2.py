@@ -3,6 +3,15 @@ import sys
 import os
 import mysql.connector
 
+import datetime
+
+HEADER_TEMPLATE = \
+"HTTP/1.1 200 OK\r\n" \
+"Server: webhttpd/2.0\r\n" \
+"Cache-Control: no-cache, no-store, must-revalidate\r\n" \
+"Connection: keep-alive\r\n" \
+"Date: {}\r\n" \
+
 # Connection configuration for MySQL Connection
 SQL_CONFIG = {
     "host": "192.168.2.5",
@@ -29,6 +38,8 @@ COL = """
         """
 
 def main():
+    HTML = ""
+
     # Connect to server
     connection = mysql.connector.connect(**SQL_CONFIG)
 
@@ -42,7 +53,7 @@ def main():
     cursor = connection.cursor()
     cursor.execute(sql)
 
-    sys.stdout.write(COL)
+    HTML += COL
     for result in cursor:
         row = "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n".format(
             result[0],
@@ -51,8 +62,13 @@ def main():
             result[3],
             result[4]
         )
-        sys.stdout.write(row)
-    sys.stdout.write("</table></body></html>")
+        HTML += row
+    HTML += "</table></body></html>"
+
+    HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT"))
+
+
+    sys.stdout.write(HEADER + HTML)
 
 
 
