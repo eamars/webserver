@@ -133,6 +133,6 @@ HTML = """
 
 </body></html>
 """
-HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT"))
+HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT"))
 sys.stdout.write(HEADER)
 sys.stdout.write(HTML)

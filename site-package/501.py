@@ -105,5 +105,5 @@ HTML = """
 </body></html>
 """
 
-sys.stdout.write(HEADER_TEMPLATE.format(len(HTML), datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT")))
+sys.stdout.write(HEADER_TEMPLATE.format(len(HTML), datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 sys.stdout.write(HTML)

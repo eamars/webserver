@@ -243,5 +243,5 @@ for i in optional_modules_list:
         globals()[i] = module
     except: pass
 
-sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT")))
+sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 sys.stdout.write(pyinfo())

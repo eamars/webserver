@@ -31,7 +31,7 @@ COL = """
         """
 
 def main():
-    sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d-%b-%Y %H:%M:%S GMT")))
+    sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 
     # Connect to server
     connection = mysql.connector.connect(**SQL_CONFIG)
@@ -52,7 +52,7 @@ def main():
         sys.stdout.write(col)
     sys.stdout.write("</tr>")
 
-    sql = "SELECT * FROM ZUOBIAO where ID < 40"
+    sql = "SELECT * FROM ZUOBIAO"
     cursor = connection.cursor()
     cursor.execute(sql)
 
