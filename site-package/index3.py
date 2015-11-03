@@ -10,6 +10,7 @@ HEADER_TEMPLATE = \
 "Server: webhttpd/2.0\r\n" \
 "Cache-Control: no-cache, no-store, must-revalidate\r\n" \
 "Connection: keep-alive\r\n" \
+"Content-Type: text/html; charset=utf-8\r\n" \
 "Date: {}\r\n" \
 
 # Connection configuration for MySQL Connection
