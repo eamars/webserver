@@ -4,7 +4,7 @@ import os
 import datetime
 
 HEADER_TEMPLATE = \
-"HTTP/1.1 404 Not Found\r\n" \
+"HTTP/1.1 501 Not implemented\r\n" \
 "Server: webhttpd/2.0\r\n" \
 "Cache-Control: no-cache, no-store, must-revalidate\r\n" \
 "Connection: close\r\n" \
@@ -68,8 +68,8 @@ HTML = """
 
     <div class="container">
 
-      <h1>404</h1>
-      <p><strong>File not found</strong></p>
+      <h1>501</h1>
+      <p><strong>Not implemented</strong></p>
 
       <p>
         The site configured at this address does not
