@@ -26,15 +26,7 @@ int execute_python(char *path, Configuration *config, Client *client)
     int                 output_fd[2];
     int                 pid;
     int                 status;
-    char                *output_buffer = NULL;
     int                 content_length = 0;
-    int                 method;
-
-    // print path
-    printf("EXEC_PATH: %s\n", path);
-
-    // HTTP get or post
-    method = client->header->method;
 
     // get content length
     for (int i = 0; i < client->header->num_fields; i++)
@@ -64,9 +56,26 @@ int execute_python(char *path, Configuration *config, Client *client)
         char query_env[MAX_QUERY_SZ];
         char length_env[MAX_QUERY_SZ];
         char dir_env[MAX_QUERY_SZ];
+        char default_dir[MAX_VALUE_LEN];
+        char exec_path[MAX_PATH_SZ];
+        char *query = NULL;
+
+        // extract post query
+        if ((query = strstr(path, "?")) != NULL)
+        {
+            strcpy(query_env, query);
+            // terminate old string and create executable path
+            *query = '\0';
+
+        }
+
+        // create new executable path
+        sprintf(exec_path, "%s.py", path);
+
+        // debug print
+        printf("EXEC_PATH: [%s]\nQUERY: [%s]\n", path, query_env);
 
         // get current working directory
-        char default_dir[MAX_VALUE_LEN];
         memset(default_dir, 0, MAX_VALUE_LEN);
         config_get_value(config, "default_dir", default_dir);
 
@@ -88,7 +97,7 @@ int execute_python(char *path, Configuration *config, Client *client)
         close(output_fd[0]);
         close(input_fd[1]);
 
-        execl(path, path, NULL);
+        execl(exec_path, exec_path, NULL);
         perror("execl");
         exit(errno);
     }
@@ -104,7 +113,7 @@ int execute_python(char *path, Configuration *config, Client *client)
 
         // write form data to CGI
         // write(input_fd[1], client->header->body, strlen(client->header->body));
-        if (method == 3) // only post will write data to it
+        if (client->header->method == 3) // only post will write data to it
         {
             write(input_fd[1], client->payload, strlen(client->payload));
         }

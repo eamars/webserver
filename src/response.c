@@ -110,7 +110,7 @@ int http_response_get_method(Configuration *config, Client *client)
     rc = config_get_value(config, "default_dir", default_dir);
 
     // get executable path
-    sprintf(path, "%s%s.py", default_dir, client->header->url);
+    sprintf(path, "%s%s", default_dir, client->header->url);
 
     error_code = execute_python(path, config, client);
 
@@ -121,7 +121,7 @@ int http_response_get_method(Configuration *config, Client *client)
             memset(value, 0, MAX_VALUE_LEN);
             rc = config_get_value(config, "default_404_page", value);
 
-            sprintf(path, "%s%s.py", default_dir, value);
+            sprintf(path, "%s%s", default_dir, value);
             error_code = execute_python(path, config, client);
         }
         else if (error_code == EACCES)
@@ -129,7 +129,7 @@ int http_response_get_method(Configuration *config, Client *client)
             memset(value, 0, MAX_VALUE_LEN);
             rc = config_get_value(config, "default_500_page", value);
 
-            sprintf(path, "%s%s.py", default_dir, value);
+            sprintf(path, "%s%s", default_dir, value);
             error_code = execute_python(path, config, client);
         }
         else
@@ -137,7 +137,7 @@ int http_response_get_method(Configuration *config, Client *client)
             memset(value, 0, MAX_VALUE_LEN);
             rc = config_get_value(config, "default_501_page", value);
 
-            sprintf(path, "%s%s.py", default_dir, value);
+            sprintf(path, "%s%s", default_dir, value);
             error_code = execute_python(path, config, client);
         }
     }
@@ -161,7 +161,7 @@ int http_response_default(Configuration *config, Client *client)
     memset(value, 0, MAX_VALUE_LEN);
     rc = config_get_value(config, "default_501_page", value);
 
-    sprintf(path, "%s%s.py", default_dir, value);
+    sprintf(path, "%s%s", default_dir, value);
     error_code = execute_python(path, config, client);
 
     return error_code;
