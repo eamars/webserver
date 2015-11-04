@@ -2,6 +2,7 @@
 import sys
 import os
 import mysql.connector
+import urllib.parse
 
 import datetime
 
@@ -103,7 +104,8 @@ HTML = """
 """
 
 def main():
-    query = os.environ['QUERY_STRING'].split("&")[0]
+    parsed = urllib.parse.unquote(os.environ['QUERY_STRING'])
+    query = parsed.split("&")[0]
     sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 
     # Connect to server
@@ -132,6 +134,7 @@ def main():
         sys.stdout.write("</tr>\r")
     sys.stdout.write("</table></body></html>")
 
+    print(parsed)
+
 if __name__ == "__main__":
     main()
-    print(os.environ['QUERY_STRING'].split("&"))
