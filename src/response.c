@@ -124,18 +124,10 @@ int http_response_get_method(Configuration *config, Client *client)
             sprintf(path, "%s%s", default_dir, value);
             error_code = execute_python(path, config, client);
         }
-        else if (error_code == EACCES)
-        {
-            memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_500_page", value);
-
-            sprintf(path, "%s%s", default_dir, value);
-            error_code = execute_python(path, config, client);
-        }
         else
         {
             memset(value, 0, MAX_VALUE_LEN);
-            rc = config_get_value(config, "default_501_page", value);
+            rc = config_get_value(config, "default_500_page", value);
 
             sprintf(path, "%s%s", default_dir, value);
             error_code = execute_python(path, config, client);
