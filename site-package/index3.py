@@ -69,7 +69,7 @@ COL = """
             </style>
             </head>
             <body>
-                <table border="1" bgcolor="D8D8D8">
+                <table>
                     <tr>
         """
 
