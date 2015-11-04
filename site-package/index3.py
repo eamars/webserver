@@ -25,6 +25,49 @@ SQL_CONFIG = {
 
 COL = """
         <html>
+            <head>
+                <title>Localhost</title>
+                <style>
+                    table {
+                        white-space: nowrap;
+                        font-family: 'Arial';
+                        margin: 25px auto;
+                        border-collapse: collapse;
+                        border: 1px solid #eee;
+                        border-bottom: 2px solid #00cccc;
+                        box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1), 0px 10px 20px rgba(0, 0, 0, 0.05), 0px 20px 20px rgba(0, 0, 0, 0.05), 0px 30px 20px rgba(0, 0, 0, 0.05);
+                    }
+                    table tr:hover {
+                        background: #f4f4f4;
+                    }
+                    table tr:hover td {
+                        color: #555;
+                    }
+                    table th, table td {
+                        color: #999;
+                        border: 1px solid #eee;
+                        padding: 12px 35px;
+                        border-collapse: collapse;
+                    }
+                    table th {
+                        background: #00cccc;
+                        color: #fff;
+                        text-transform: uppercase;
+                        font-size: 12px;
+                    }
+                    table th.last {
+                        border-right: none;
+                    }
+                    h3 {
+                        font:1.2em normal Arial,sans-serif;
+                        color:#34495E;
+                        text-align:center;
+                        letter-spacing:-2px;
+                        font-size:2.5em;
+                        margin:20px 0;
+                    }
+            </style>
+            </head>
             <body>
                 <table border="1" bgcolor="D8D8D8">
                     <tr>
