@@ -9,7 +9,6 @@
 do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 
-#define MAX_QUERY_SZ 1024
 #define READ_SZ 1024
 #define MAX_PATH_SZ 8192
 
