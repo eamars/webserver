@@ -64,7 +64,6 @@ HTML = """
             h3 {
                 font:1.2em normal Arial,sans-serif;
                 color:#34495E;
-                text-transform:uppercase;
                 text-align:center;
                 letter-spacing:-2px;
                 font-size:2.5em;
@@ -73,7 +72,7 @@ HTML = """
     </style>
     </head>
     <body>
-        <h3>%d log entries from 192.168.2.5</h1>
+        <h3>%d results for %s</h1>
         <table>
             <tr>
                 <th>ID</th>
@@ -104,6 +103,7 @@ HTML = """
 """
 
 def main():
+    query = os.environ['QUERY_STRING'].split("&")[0]
     sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 
     # Connect to server
@@ -115,23 +115,23 @@ def main():
     # Get mysql cursor
     cursor = connection.cursor()
 
-    sql = "SELECT COUNT(*) FROM `{}`".format(TABLE_NAME)
+    sql = "SELECT COUNT(*) FROM `{}` WHERE {}".format(TABLE_NAME, query)
     cursor.execute(sql)
 
     for result in cursor:
-        sys.stdout.write(HTML % result[0]) # old style substituding numbers into string
+        sys.stdout.write(HTML % (result[0], query)) # old style substituding numbers into string
         break
 
-    sql = "SELECT * FROM `{}`".format(TABLE_NAME)
+    sql = "SELECT * FROM `{}` WHERE {}".format(TABLE_NAME, query)
     cursor.execute(sql)
 
     for result in cursor:
         sys.stdout.write("<tr>")
         for row in result:
             sys.stdout.write("<td>{}</td>".format(row))
-        sys.stdout.write("</tr>\n")
+        sys.stdout.write("</tr>\r")
     sys.stdout.write("</table></body></html>")
-
 
 if __name__ == "__main__":
     main()
+    print(os.environ['QUERY_STRING'].split("&"))

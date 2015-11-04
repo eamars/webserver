@@ -58,22 +58,19 @@ int execute_python(char *path, Configuration *config, Client *client)
         char dir_env[MAX_QUERY_SZ];
         char default_dir[MAX_VALUE_LEN];
         char exec_path[MAX_PATH_SZ];
+        char *str = NULL;
         char *query = NULL;
 
         // extract post query
-        if ((query = strstr(path, "?")) != NULL)
+        if ((str = strstr(path, "?")) != NULL)
         {
-            strcpy(query_env, query);
             // terminate old string and create executable path
-            *query = '\0';
-
+            query = str + 1;
+            *str = '\0';
         }
 
         // create new executable path
         sprintf(exec_path, "%s.py", path);
-
-        // debug print
-        printf("EXEC_PATH: [%s]\nQUERY: [%s]\n", path, query_env);
 
         // get current working directory
         memset(default_dir, 0, MAX_VALUE_LEN);
@@ -82,7 +79,7 @@ int execute_python(char *path, Configuration *config, Client *client)
         sprintf(method_env, "REQUEST_METHOD=%s", http_method_str(client->header->method));
         putenv(method_env);
 
-        sprintf(query_env, "QUERY_STRING=%s", client->header->url);
+        sprintf(query_env, "QUERY_STRING=%s", query);
         putenv(query_env);
 
         sprintf(length_env, "CONTENT_LENGTH=%d", content_length);
@@ -90,6 +87,9 @@ int execute_python(char *path, Configuration *config, Client *client)
 
         sprintf(dir_env, "WORKING_DIR=%s", default_dir);
         putenv(dir_env);
+
+        // debug print
+        printf("EXEC_PATH: [%s]\nQUERY: [%s]\n", path, query_env);
 
         // redirect pipe
         dup2(output_fd[1], STDOUT_FILENO);
