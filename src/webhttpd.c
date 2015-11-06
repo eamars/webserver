@@ -19,7 +19,7 @@
 #include "worker.h"
 
 
-static const char *usage = "webhttpd.out [\x1B[32mstart\033[0m|\x1B[32mstop\033[0m] site_package_folder";
+static const char *usage = "webhttpd.out site_package_folder";
 
 int listen_on(int port)
 {
@@ -200,22 +200,10 @@ int main(int argc, char **argv)
 	// signal(SIGCHLD, SIG_IGN);
 
 	// test if the user enter the correct arguments
-    if (argc != 3)
+    if (argc != 2)
     {
         fprintf(stderr, "Invalid arguments\nUsage: %s\n", usage);
         return -1;
     }
-	if (!strcmp(argv[1], "start"))
-	{
-		return start(argv[2]);
-	}
-	else if (!strcmp(argv[1], "stop"))
-	{
-		return stop(argv[2]);
-	}
-	else
-	{
-		fprintf(stderr, "Invalid arguments\nUsage: %s\n", usage);
-		return -1;
-	}
+	return start(argv[1]);
 }

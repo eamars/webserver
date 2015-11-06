@@ -9,10 +9,10 @@ INCLUDE = -I./include -I./src
 DEL = rm
 
 # Conditional flags
-ifeq ($(CC),gcc)
-LD_LIBS = -pthread
-else
+ifeq ($(CC),clang)
 LD_LIBS = -lpthread
+else
+LD_LIBS = -pthread
 endif
 
 # Definitions for object
