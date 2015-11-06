@@ -7,6 +7,12 @@ server_name = My site
 # Port to bind
 server_port = 80
 
+# Number of workers
+spawn_workers = 8
+
+# Timeout for TCP connections
+tcp_timeout = 10
+
 # dir
 default_dir = site-package
 

@@ -13,8 +13,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#define handle_error(msg) \
-        do { perror(msg); exit(EXIT_FAILURE); } while (0)
+#include "error.h"
 
 #define READ_SZ 16
 

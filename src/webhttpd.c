@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "parser.h"
 #include "datetime.h"
@@ -15,6 +16,7 @@
 #include "config.h"
 #include "pidlock.h"
 #include "http_parser.h"
+#include "worker.h"
 
 
 static const char *usage = "webhttpd.out [\x1B[32mstart\033[0m|\x1B[32mstop\033[0m] site_package_folder";
@@ -34,15 +36,13 @@ int listen_on(int port)
 	ret = bind(sock, (struct sockaddr *) &sa, sizeof(sa));
 	if (ret < 0)
 	{
-		perror("bind");
-		exit(-1);
+		handle_error("bind");
 	}
 
 	ret = listen(sock, 5);
 	if (ret < 0)
 	{
-		perror("listen");
-		exit(-1);
+		handle_error("listen");
 	}
 
 	return sock;
@@ -59,123 +59,109 @@ int accept_connection(int sock)
 }
 
 
-
-void handle_request(Configuration *config, int msgsock)
-{
-	Client *client = (Client *) malloc(sizeof(Client));
-
-	client->msgsock = msgsock;
-
-	get_peer_information(client);
-
-	handle_http_request(config, client);
-
-	close(msgsock);
-}
-
-void handle_fork(Configuration *config, int msgsock)
-{
-	int pid;
-	int status;
-
-	pid = fork();
-	if (pid < 0)
-	{
-		perror("fork");
-		exit(-1);
-	}
-	else if (pid == 0)
-	{
-		handle_request(config, msgsock);
-		exit(0);
-	}
-	else
-	{
-		close(msgsock);
-	}
-}
-
 int start(char *path)
 {
-	int pid;
-	int rc;
-	int status;
+	int 					pid;
+	int 					rc;
+	char 					config_path[MAX_PATH_SZ];
+	char 					value[MAX_KEY_LEN];
+	int 					port;
+	int 					sock;
+	int 					num_workers;
 
-	// let child to execute the job
-	pid = fork();
-	if (pid < 0)
+	Configuration 			*config;
+	Queue 					*queue;
+	ThreadPool 				pool;
+	ThreadConfig 			thread_config;
+
+
+	/* Store PID file and load config*/
+	pid = getpid();
+
+	// init configuration
+	sprintf(config_path, "%s/site-config", path);
+	config = config_init(config_path);
+	if (config == NULL)
+    {
+        handle_error("config_init");
+    }
+
+	// read config
+	rc = config_load(config);
+	if (rc < 0)
 	{
-		printf("\x1B[31mFailed to fork subprocess\033[0m\n");
-		exit (-1);
-	}
-	else if (pid == 0)
-	{
-		/* Store PID file and load config*/
-		// write pid to log file for killing tasks later
-		pid = getpid();
-		rc = write_pid(path, pid);
-		if (rc)
-		{
-			remove_pid(path);
-			return rc;
-		}
-
-		// try to read config file
-	    char config_path[MAX_PATH_SZ];
-		char value[MAX_KEY_LEN];
-		Configuration *config;
-		int port;
-
-		// init configuration
-		sprintf(config_path, "%s/site-config", path);
-		config = config_init(config_path);
-		if (config == NULL)
-	    {
-	        fprintf(stderr, "Unable to allocate memory\n");
-	        exit(-1);
-	    }
-
-		// read config
-		rc = config_load(config);
-		if (rc < 0)
-		{
-			fprintf(stderr, "Unable to read configuration file: %s\n", config_path);
-			exit(-1);
-		}
-
-		memset(value, 0, MAX_VALUE_LEN);
-	    rc = config_get_value(config, "server_port", value);
-		if (!rc)
-		{
-			fprintf(stderr, "Unable to read port number from: %s\n", config_path);
-			exit(-1);
-		}
-		port = atoi(value);
-
-		// print out server status
-		printf("*webhttpd starts with instance %s with pid %d listening on port %d*\n", path, pid, port);
-
-		/* Start server */
-		int sock;
-		int msgsock;
-
-		sock = listen_on(port);
-
-		while (1)
-		{
-			msgsock = accept_connection(sock);
-			handle_fork(config, msgsock);
-		}
-
-		config_destroy(config);
-		close(sock);
-		return 0;
-	}
-	else
-	{
-		return 0;
+		handle_error("config_load");
 	}
 
+	// read port number
+	memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "server_port", value);
+	if (!rc)
+	{
+		handle_error("server_port");
+	}
+	port = atoi(value);
+
+	// read number of workers
+	memset(value, 0, MAX_VALUE_LEN);
+    rc = config_get_value(config, "spawn_workers", value);
+	if (!rc)
+	{
+		handle_error("spawn_workers");
+	}
+	num_workers = atoi(value);
+
+	// create queue
+	queue = queue_init();
+	thread_config.queue = queue;
+	thread_config.config = config;
+
+	// spawn worker
+    pool.thread_pool = (pthread_t *) malloc (num_workers * sizeof(pthread_t));
+    pool.num_threads = num_workers;
+
+	for (int i = 0; i < num_workers; i++)
+    {
+        thread_argument_wapper *wapper = (thread_argument_wapper *) malloc (sizeof(thread_argument_wapper));
+        wapper->thread_config = &thread_config;
+        wapper->thread_id = i;
+
+        pthread_create(&pool.thread_pool[i], NULL, worker_thread, wapper);
+    }
+
+	/* Start server */
+	sock = listen_on(port);
+
+	// print out server status
+	printf("*webhttpd starts with instance %s with pid %d listening on port %d*\n", path, pid, port);
+
+	while (1)
+	{
+		int *msgsock;
+
+		msgsock = (int *) malloc (sizeof(int));
+
+		*msgsock = accept_connection(sock);
+
+		if (*msgsock < 0)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else
+            {
+                handle_error("accept");
+            }
+        }
+
+        queue_put(queue, msgsock);
+
+	}
+
+	config_destroy(config);
+	close(sock);
+	return 0;
 }
 
 int stop(char *path)

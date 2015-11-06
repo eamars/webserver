@@ -1,12 +1,11 @@
 #ifndef CLIENT_H_
 #define CLIENT_H_
 
+#include <netinet/in.h>
+
 #include "parser.h"
 #include "config.h"
-
-
-#define handle_error(msg) \
-do { perror(msg); exit(EXIT_FAILURE); } while (0)
+#include "error.h"
 
 
 #define READ_SZ 1024
@@ -26,6 +25,8 @@ void get_peer_information(Client *client);
 
 // read http request from socket
 void handle_http_request(Configuration *config, Client *client);
+
+void handle_request(Configuration *config, int msgsock);
 
 
 #endif

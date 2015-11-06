@@ -60,6 +60,20 @@ void get_peer_information(Client *client)
 }
 
 
+void handle_request(Configuration *config, int msgsock)
+{
+	Client *client = (Client *) malloc(sizeof(Client));
+
+	client->msgsock = msgsock;
+
+	get_peer_information(client);
+
+	handle_http_request(config, client);
+
+	close(msgsock);
+}
+
+
 void handle_http_request(Configuration *config, Client *client)
 {
     int                 rc;
@@ -115,7 +129,7 @@ void handle_http_request(Configuration *config, Client *client)
                 rc = parse(header, data, sz);
                 client->header = header;
 
-                // extract payload
+                // extract Content Length
                 for (int i = 0; i < client->header->num_fields; i++)
                 {
                     if (strcasecmp(client->header->fields[i], "Content-Length") == 0)
@@ -124,6 +138,8 @@ void handle_http_request(Configuration *config, Client *client)
                         break;
                     }
                 }
+
+                // extract payload if Content Length > 0
                 if (content_length > 0)
                 {
                     if (READ_SZ - sz >= content_length)
