@@ -6,8 +6,14 @@
 CC = cc
 CFLAGS = -Os -Wall -Wextra -Wstrict-prototypes -Wno-unused-parameter -Wno-unused-variable -g -std=c99 -D_GNU_SOURCE
 INCLUDE = -I./include -I./src
-LD_LIBS = -lpthread
 DEL = rm
+
+# Conditional flags
+ifeq ($(CC),gcc)
+LD_LIBS = -pthread
+else
+LD_LIBS = -lpthread
+endif
 
 # Definitions for object
 PROG_OBJ = src/http_parser.o src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/pidlock.o src/cgi.o src/response.o src/worker.o
