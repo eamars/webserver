@@ -101,7 +101,8 @@ def main():
 
     HTML += COL
     for result in cursor:
-        row = "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n".format(
+        row = "<tr><td><a href='http://www.javmoo.info/cn/genre/{}'>{}</a></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n".format(
+            result[0],
             result[0],
             result[1],
             result[2],
