@@ -121,7 +121,7 @@ void handle_http_request(Configuration *config, Client *client)
             // process header
             if (header_end)
             {
-                printf("\n----------\nRECV [%s]:\n%s\n----------\n", client->ipstr, data);
+                printf("\n----------\nRECV from [%s]:\n%s\n----------\n", client->ipstr, data);
                 // get http header
                 http_header_t *header = (http_header_t *) malloc (sizeof(http_header_t));
 
