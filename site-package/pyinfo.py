@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os, sys, platform, cgi, socket
 import datetime
 
