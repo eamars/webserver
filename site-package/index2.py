@@ -86,8 +86,6 @@ COL = """
         """
 
 def main():
-    HTML = ""
-
     # Connect to server
     connection = mysql.connector.connect(**SQL_CONFIG)
 
@@ -101,7 +99,9 @@ def main():
     cursor = connection.cursor()
     cursor.execute(sql)
 
-    HTML += COL
+    sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
+    sys.stdout.write(COL)
+
     for result in cursor:
         row = "<tr><td><a href='http://www.javmoo.info/cn/genre/{}'>{}</a></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n".format(
             result[0],
@@ -111,15 +111,8 @@ def main():
             result[3],
             result[4]
         )
-        HTML += row
-    HTML += "</table></body></html>"
-
-    HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT"))
-
-
-    sys.stdout.write(HEADER + HTML)
-
-
+        sys.stdout.write(row)
+    sys.stdout.write("</table></body></html>")
 
 
 if __name__ == "__main__":
