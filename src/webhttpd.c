@@ -82,9 +82,9 @@ int start(char *path)
 	sprintf(config_path, "%s/site-config", path);
 	config = config_init(config_path);
 	if (config == NULL)
-    {
-        handle_error("config_init");
-    }
+	{
+		handle_error("config_init");
+	}
 
 	// read config
 	rc = config_load(config);
@@ -95,7 +95,7 @@ int start(char *path)
 
 	// read port number
 	memset(value, 0, MAX_VALUE_LEN);
-    rc = config_get_value(config, "server_port", value);
+	rc = config_get_value(config, "server_port", value);
 	if (!rc)
 	{
 		handle_error("server_port");
@@ -104,7 +104,7 @@ int start(char *path)
 
 	// read number of workers
 	memset(value, 0, MAX_VALUE_LEN);
-    rc = config_get_value(config, "spawn_workers", value);
+	rc = config_get_value(config, "spawn_workers", value);
 	if (!rc)
 	{
 		handle_error("spawn_workers");
@@ -117,17 +117,17 @@ int start(char *path)
 	thread_config.config = config;
 
 	// spawn worker
-    pool.thread_pool = (pthread_t *) malloc (num_workers * sizeof(pthread_t));
-    pool.num_threads = num_workers;
+	pool.thread_pool = (pthread_t *) malloc (num_workers * sizeof(pthread_t));
+	pool.num_threads = num_workers;
 
 	for (int i = 0; i < num_workers; i++)
-    {
-        thread_argument_wapper *wapper = (thread_argument_wapper *) malloc (sizeof(thread_argument_wapper));
-        wapper->thread_config = &thread_config;
-        wapper->thread_id = i;
+	{
+		thread_argument_wapper *wapper = (thread_argument_wapper *) malloc (sizeof(thread_argument_wapper));
+		wapper->thread_config = &thread_config;
+		wapper->thread_id = i;
 
-        pthread_create(&pool.thread_pool[i], NULL, worker_thread, wapper);
-    }
+		pthread_create(&pool.thread_pool[i], NULL, worker_thread, wapper);
+	}
 
 	/* Start server */
 	sock = listen_on(port);
@@ -144,18 +144,18 @@ int start(char *path)
 		*msgsock = accept_connection(sock);
 
 		if (*msgsock < 0)
-        {
-            if (errno == EINTR)
-            {
-                continue;
-            }
-            else
-            {
-                handle_error("accept");
-            }
-        }
+		{
+			if (errno == EINTR)
+			{
+				continue;
+			}
+			else
+			{
+				handle_error("accept");
+			}
+		}
 
-        queue_put(queue, msgsock);
+		queue_put(queue, msgsock);
 
 	}
 
@@ -200,10 +200,10 @@ int main(int argc, char **argv)
 	// signal(SIGCHLD, SIG_IGN);
 
 	// test if the user enter the correct arguments
-    if (argc != 2)
-    {
-        fprintf(stderr, "Invalid arguments\nUsage: %s\n", usage);
-        return -1;
-    }
+	if (argc != 2)
+	{
+		fprintf(stderr, "Invalid arguments\nUsage: %s\n", usage);
+		return -1;
+	}
 	return start(argv[1]);
 }
