@@ -63,14 +63,34 @@ int execute_python(char *path, Configuration *config, Client *client)
         char default_dir[MAX_VALUE_LEN];
         char exec_path[MAX_PATH_SZ];
         char *str = NULL;
+        char *get_query_loc = NULL;
         char *get_query = NULL;
+        char *post_query = NULL;
 
         // extract post query
         if ((str = strstr(path, "?")) != NULL)
         {
             // terminate old string and create executable path
-            get_query = str + 1;
+            get_query_loc = str + 1;
             *str = '\0';
+        }
+
+        // pass NULL to script if there is no get query
+        if (get_query_loc == NULL)
+        {
+            get_query = "";
+        }
+        else
+        {
+            get_query = get_query_loc;
+        }
+        if (client->payload == NULL)
+        {
+            post_query = "";
+        }
+        else
+        {
+            post_query = client->payload;
         }
 
         // get current working directory
@@ -86,7 +106,7 @@ int execute_python(char *path, Configuration *config, Client *client)
         sprintf(get_query_env, "GET_QUERY=%s", get_query);
         putenv(get_query_env);
 
-        sprintf(post_query_env, "POST_QUERY=%s", client->payload);
+        sprintf(post_query_env, "POST_QUERY=%s", post_query);
         putenv(post_query_env);
 
         sprintf(length_env, "CONTENT_LENGTH=%d", content_length);
@@ -96,7 +116,7 @@ int execute_python(char *path, Configuration *config, Client *client)
         putenv(dir_env);
 
         // debug print
-        printf("EXEC_PATH: [%s]\nGET_QUERY: [%s]\nPOST_QUERY: [%s]\n", exec_path, get_query, client->payload);
+        printf("EXEC_PATH: [%s]\nGET_QUERY: [%s]\nPOST_QUERY: [%s]\n", exec_path, get_query, post_query);
 
         // redirect pipe
         dup2(child_to_parent[1], STDOUT_FILENO);
@@ -116,6 +136,14 @@ int execute_python(char *path, Configuration *config, Client *client)
         // close pipe
         close(child_to_parent[1]);
         close(parent_to_child[0]);
+
+        // write http request to Executable
+        for (int i = 0; i < client->header->num_fields; i++)
+        {
+            write(parent_to_child[1], client->header->fields[i], strlen(client->header->fields[i]));
+            write(parent_to_child[1], ":", 1);
+            write(parent_to_child[1], client->header->values[i], strlen(client->header->values[i]));
+        }
 
         memset(strbuf, 0, READ_SZ);
         while ((sz = read(child_to_parent[0], strbuf, READ_SZ)) != 0)
