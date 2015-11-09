@@ -11,7 +11,7 @@ HEADER_TEMPLATE = \
 "Connection: close\r\n" \
 "Content-Type: text/html; charset=utf-8\r\n" \
 "Date: {}\r\n" \
-"\r\n\r\n"
+"\r\n"
 
 
 def pyinfo():
@@ -247,3 +247,4 @@ for i in optional_modules_list:
 
 sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 sys.stdout.write(pyinfo())
+sys.stdout.write("\r\n\r\n")

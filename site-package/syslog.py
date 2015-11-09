@@ -15,7 +15,7 @@ HEADER_TEMPLATE = \
 "Connection: keep-alive\r\n" \
 "Content-Type: text/html; charset=utf-8\r\n" \
 "Date: {}\r\n" \
-"\r\n\r\n"
+"\r\n"
 
 # Connection configuration for MySQL Connection
 SQL_CONFIG = {
@@ -135,7 +135,7 @@ def main():
             sys.stdout.write("<td>{}</td>".format(row))
         sys.stdout.write("</tr>\r")
     sys.stdout.write("</table></body></html>")
-
+    sys.stdout.write("\r\n\r\n")
     print(parsed)
 
 if __name__ == "__main__":

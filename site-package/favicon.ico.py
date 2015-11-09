@@ -12,12 +12,13 @@ HEADER_TEMPLATE = \
 "Content-Type: image/x-icon\r\n" \
 "Content-Length: {}\r\n" \
 "Date: {}\r\n" \
-"\r\n\r\n"
+"\r\n"
 
 fp = open(os.environ['WORKING_DIR'] + "/favicon.ico", "rb")
 binary = fp.read()
 
 sys.stdout.write(HEADER_TEMPLATE.format(len(binary), datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 sys.stdout.buffer.write(binary)
+sys.stdout.write("\r\n\r\n")
 
 fp.close()

@@ -13,7 +13,7 @@ HEADER_TEMPLATE = \
 "Content-Type: text/html; charset=utf-8\r\n" \
 "Content-Length: {}\r\n" \
 "Date: {}\r\n" \
-"\r\n\r\n"
+"\r\n"
 
 HTML = """
 <!DOCTYPE html>
@@ -109,3 +109,4 @@ HTML = """
 
 sys.stdout.write(HEADER_TEMPLATE.format(len(HTML), datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 sys.stdout.write(HTML)
+sys.stdout.write("\r\n\r\n")

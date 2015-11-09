@@ -6,3 +6,4 @@ import os
 
 fp = open(os.environ['WORKING_DIR'] + "/robots.txt", "rb")
 sys.stdout.buffer.write(fp.read())
+sys.stdout.write("\r\n\r\n")

@@ -12,7 +12,7 @@ HEADER_TEMPLATE = \
 "Connection: keep-alive\r\n" \
 "Content-Type: text/html; charset=utf-8\r\n" \
 "Date: {}\r\n" \
-"\r\n\r\n"
+"\r\n"
 
 
 HTML = """
@@ -138,3 +138,4 @@ HTML = """
 HEADER = HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT"))
 sys.stdout.write(HEADER)
 sys.stdout.write(HTML)
+sys.stdout.write("\r\n\r\n")
