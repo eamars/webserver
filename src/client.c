@@ -159,6 +159,7 @@ void handle_http_request(Configuration *config, Client *client)
                         memcpy(client->payload, buffer + sz, copied);
 
                         char payload_buffer[remained + 1];
+                        memset(payload_buffer, 0, remained+1);
 
                         // receive remained payload from socket
                         sz = read(client->msgsock, payload_buffer, content_length);
