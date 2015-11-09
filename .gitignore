@@ -33,3 +33,5 @@
 
 # Project specific file
 *.pid
+*.pyc
+__pycache__
