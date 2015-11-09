@@ -52,21 +52,24 @@ int execute_python(char *path, Configuration *config, Client *client)
     }
     else if (pid == 0)
     {
-        // child code
+        // environment variable
         char method_env[MAX_QUERY_SZ];
-        char query_env[MAX_QUERY_SZ];
+        char get_query_env[MAX_QUERY_SZ];
+        char post_query_env[MAX_QUERY_SZ];
         char length_env[MAX_QUERY_SZ];
         char dir_env[MAX_QUERY_SZ];
+
+        // executable variable
         char default_dir[MAX_VALUE_LEN];
         char exec_path[MAX_PATH_SZ];
         char *str = NULL;
-        char *query = NULL;
+        char *get_query = NULL;
 
         // extract post query
         if ((str = strstr(path, "?")) != NULL)
         {
             // terminate old string and create executable path
-            query = str + 1;
+            get_query = str + 1;
             *str = '\0';
         }
 
@@ -80,8 +83,11 @@ int execute_python(char *path, Configuration *config, Client *client)
         sprintf(method_env, "REQUEST_METHOD=%s", http_method_str(client->header->method));
         putenv(method_env);
 
-        sprintf(query_env, "QUERY_STRING=%s", query);
-        putenv(query_env);
+        sprintf(get_query_env, "GET_QUERY=%s", get_query);
+        putenv(get_query_env);
+
+        sprintf(post_query_env, "POST_QUERY=%s", client->payload);
+        putenv(post_query_env);
 
         sprintf(length_env, "CONTENT_LENGTH=%d", content_length);
         putenv(length_env);
@@ -90,7 +96,7 @@ int execute_python(char *path, Configuration *config, Client *client)
         putenv(dir_env);
 
         // debug print
-        printf("EXEC_PATH: [%s]\nQUERY: [%s]\n", exec_path, query);
+        printf("EXEC_PATH: [%s]\nGET_QUERY: [%s]\nPOST_QUERY: [%s]\n", exec_path, get_query, client->payload);
 
         // redirect pipe
         dup2(child_to_parent[1], STDOUT_FILENO);
@@ -110,13 +116,6 @@ int execute_python(char *path, Configuration *config, Client *client)
         // close pipe
         close(child_to_parent[1]);
         close(parent_to_child[0]);
-
-        // write form data to CGI
-        if (client->header->method == 3) // only post will write data to it
-        {
-            write(parent_to_child[1], client->header->body, strlen(client->header->body));
-        }
-
 
         memset(strbuf, 0, READ_SZ);
         while ((sz = read(child_to_parent[0], strbuf, READ_SZ)) != 0)

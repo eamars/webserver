@@ -106,7 +106,7 @@ HTML = """
 """
 
 def main():
-    parsed = urllib.parse.unquote(os.environ['QUERY_STRING'])
+    parsed = urllib.parse.unquote(os.environ.get('GET_QUERY'))
     query = parsed.split("&")[0]
     sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
 

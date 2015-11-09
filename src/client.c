@@ -129,6 +129,47 @@ void handle_http_request(Configuration *config, Client *client)
                 rc = parse(header, data, sz);
                 client->header = header;
 
+                // extract Content Length
+                for (int i = 0; i < client->header->num_fields; i++)
+                {
+                    if (strcasecmp(client->header->fields[i], "Content-Length") == 0)
+                    {
+                        content_length = atoi(client->header->values[i]);
+                        break;
+                    }
+                }
+
+                // extract payload if Content Length > 0
+                if (content_length > 0)
+                {
+                    if (READ_SZ - sz >= content_length)
+                    {
+                        client->payload = malloc(content_length + 1);
+                        memcpy(client->payload, buffer + sz, content_length);
+                    }
+                    else
+                    {
+                        int remained;
+                        int copied;
+
+                        copied = READ_SZ - sz;
+                        remained = content_length - copied;
+
+                        client->payload = malloc(content_length + 1);
+                        memcpy(client->payload, buffer + sz, copied);
+
+                        char payload_buffer[remained + 1];
+
+                        // receive remained payload from socket
+                        sz = read(client->msgsock, payload_buffer, content_length);
+                        memcpy(client->payload + copied, payload_buffer, remained);
+                    }
+                }
+                else
+                {
+                    client->payload = NULL;
+                }
+
                 // clean up received header
                 free(data);
 
@@ -137,6 +178,10 @@ void handle_http_request(Configuration *config, Client *client)
 
                 // clean up http response
                 free(client->header);
+                if (client->payload)
+                {
+                    free(client->payload);
+                }
                 free(client);
 
 
