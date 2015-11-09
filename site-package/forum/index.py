@@ -160,9 +160,9 @@ POST = """
 <div align="center" class="form-style-6">
 <form action="index" method="post" id="usrform">
 <input type="text" name="author" placeholder="Who are you?">
-</form>
 <textarea placeholder="Say something..." rows="4" cols="50" name="comment" form="usrform"></textarea>
 <input type="submit">
+</form>
 </div>
 """
 
