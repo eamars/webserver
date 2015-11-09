@@ -112,10 +112,9 @@ int execute_python(char *path, Configuration *config, Client *client)
         close(parent_to_child[0]);
 
         // write form data to CGI
-        // write(input_fd[1], client->header->body, strlen(client->header->body));
         if (client->header->method == 3) // only post will write data to it
         {
-            write(parent_to_child[1], client->payload, strlen(client->payload));
+            write(parent_to_child[1], client->header->body, strlen(client->header->body));
         }
 
 

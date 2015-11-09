@@ -17,7 +17,6 @@ typedef struct {
     int msgsock;          // Socket for the connection - valid if > 0
     char ipstr[INET6_ADDRSTRLEN];
     http_header_t *header;
-    char *payload;
 } Client;
 
 // get client connection information
