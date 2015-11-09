@@ -16,7 +16,7 @@ LD_LIBS = -pthread
 endif
 
 # Definitions for object
-PROG_OBJ = src/http_parser.o src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/pidlock.o src/cgi.o src/response.o src/worker.o
+PROG_OBJ = src/http_parser.o src/webhttpd.o src/config.o src/parser.o src/datetime.o src/client.o src/cgi.o src/response.o src/worker.o
 
 # Targets
 default: src/webhttpd.out

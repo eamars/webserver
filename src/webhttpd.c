@@ -14,7 +14,6 @@
 #include "datetime.h"
 #include "client.h"
 #include "config.h"
-#include "pidlock.h"
 #include "http_parser.h"
 #include "worker.h"
 
@@ -161,33 +160,6 @@ int start(char *path)
 
 	config_destroy(config);
 	close(sock);
-	return 0;
-}
-
-int stop(char *path)
-{
-	int pid;
-	char cmd[512];
-
-	// read pid from pid lock
-	pid = read_pid(path);
-	if (pid < 0)
-	{
-		return pid;
-	}
-
-	// terminate the task
-	// kill both child and parent task
-	sprintf(cmd, "pkill -TERM -P %d", pid);
-	system(cmd);
-	sprintf(cmd, "kill -TERM %d", pid);
-	system(cmd);
-	// kill(pid, SIG_TERM);
-
-	printf("\x1B[32mwebhttpd with instance %s\033[0m is terminated\n", path);
-
-	remove_pid(path);
-
 	return 0;
 }
 
