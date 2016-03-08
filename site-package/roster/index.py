@@ -4,8 +4,11 @@
 import sys
 import os
 import urllib.parse
-import datetime
+from datetime import datetime
+from random import randint
 from sql import *
+
+HTML_DATE_FMT = "%Y-%m-%d"
 
 SQL_CONFIG = {
     "host": "192.168.2.5",
@@ -18,7 +21,7 @@ SQL_CONFIG = {
 DB_NAME = "test"
 
 # Table name in MySQL database
-TABLE_NAME = "forum_posts"
+TABLE_NAME = "roster"
 
 HEADER_TEMPLATE = \
 "HTTP/1.1 200 OK\r\n" \
@@ -29,171 +32,72 @@ HEADER_TEMPLATE = \
 "Date: {}\r\n" \
 "\r\n"
 
-HTML = """
+HEADER = """
 <html>
     <head>
-        <title>Forum</title>
-            <style>
-                table {
-                    white-space: nowrap;
-                    font-family: 'Arial';
-                    margin: 25px auto;
-                    border-collapse: collapse;
-                    border: 1px solid #eee;
-                    border-bottom: 2px solid #00cccc;
-                    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1), 0px 10px 20px rgba(0, 0, 0, 0.05), 0px 20px 20px rgba(0, 0, 0, 0.05), 0px 30px 20px rgba(0, 0, 0, 0.05);
-                }
-                table tr:hover {
-                    background: #f4f4f4;
-                }
-                table tr:hover td {
-                    color: #555;
-                }
-                table th, table td {
-                    color: #999;
-                    border: 1px solid #eee;
-                    padding: 12px 35px;
-                    border-collapse: collapse;
-                }
-                table th {
-                    background: #00cccc;
-                    color: #fff;
-                    text-transform: uppercase;
-                    font-size: 12px;
-                }
-                table th.last {
-                    border-right: none;
-                }
-                h3 {
-                    font:1.2em normal Arial,sans-serif;
-                    color:#34495E;
-                    text-align:center;
-                    letter-spacing:-2px;
-                    font-size:2.5em;
-                    margin:20px 0;
-                }
-                .form-style-6{
-                    font: 95% Arial, Helvetica, sans-serif;
-                    max-width: 400px;
-                    margin: 10px auto;
-                    padding: 16px;
-                    border: 1px solid #eee;
-                }
-                .form-style-6 h1{
-                    background: #43D1AF;
-                    padding: 20px 0;
-                    font-size: 140%;
-                    font-weight: 300;
-                    text-align: center;
-                    color: #fff;
-                    margin: -16px -16px 16px -16px;
-                }
-                .form-style-6 input[type="text"],
-                .form-style-6 input[type="date"],
-                .form-style-6 input[type="datetime"],
-                .form-style-6 input[type="email"],
-                .form-style-6 input[type="number"],
-                .form-style-6 input[type="search"],
-                .form-style-6 input[type="time"],
-                .form-style-6 input[type="url"],
-                .form-style-6 textarea,
-                .form-style-6 select
-                {
-                    -webkit-transition: all 0.30s ease-in-out;
-                    -moz-transition: all 0.30s ease-in-out;
-                    -ms-transition: all 0.30s ease-in-out;
-                    -o-transition: all 0.30s ease-in-out;
-                    outline: none;
-                    box-sizing: border-box;
-                    -webkit-box-sizing: border-box;
-                    -moz-box-sizing: border-box;
-                    width: 100%;
-                    background: #fff;
-                    margin-bottom: 4%;
-                    border: 1px solid #ccc;
-                    padding: 3%;
-                    color: #555;
-                    font: 95% Arial, Helvetica, sans-serif;
-                }
-                .form-style-6 input[type="text"]:focus,
-                .form-style-6 input[type="date"]:focus,
-                .form-style-6 input[type="datetime"]:focus,
-                .form-style-6 input[type="email"]:focus,
-                .form-style-6 input[type="number"]:focus,
-                .form-style-6 input[type="search"]:focus,
-                .form-style-6 input[type="time"]:focus,
-                .form-style-6 input[type="url"]:focus,
-                .form-style-6 textarea:focus,
-                .form-style-6 select:focus
-                {
-                    box-shadow: 0 0 5px #43D1AF;
-                    padding: 3%;
-                    border: 1px solid #43D1AF;
-                }
-
-                .form-style-6 input[type="submit"],
-                .form-style-6 input[type="button"]{
-                    box-sizing: border-box;
-                    -webkit-box-sizing: border-box;
-                    -moz-box-sizing: border-box;
-                    width: 100%;
-                    padding: 3%;
-                    background: #43D1AF;
-                    border-bottom: 2px solid #30C29E;
-                    border-top-style: none;
-                    border-right-style: none;
-                    border-left-style: none;
-                    color: #fff;
-                }
-                .form-style-6 input[type="submit"]:hover,
-                .form-style-6 input[type="button"]:hover{
-                    background: #2EBC99;
-                }
-                </style>
-        </style>
+        <title>Roster</title>
     </head>
     <body>
-        <h3>树洞</h3>
+        <h3>Roster</h3>
 """
 
-POST = """
-<div align="center" class="form-style-6">
+DATETIME_PICKER = """
 <form action="index" method="post" id="usrform">
-<input type="text" name="author" placeholder="Who are you?">
-<textarea placeholder="Say something..." rows="4" cols="50" name="comment" form="usrform"></textarea>
-<input type="submit">
+    Select a date: 
+    <input type="date" name="date" value="{}">
+    <input type="submit">
 </form>
-</div>
 """
 
-DISPLAY = """
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Author</th>
-        <th>Posts</th>
-        <th>Commit Time</th>
-    </tr>
-"""
+def isDate(string):
+    try:
+        datetime.strptime(string, HTML_DATE_FMT)
+        return True
+    except Exception as e:
+        return False
+
+def random_staff():
+    staffList = ["Ran Bao", "Jamie Getty", "Brook Queree", "James Stewart"]
+
+    # Pick chair first
+    chair_index = randint(0, 3)
+    chair = staffList[chair_index]
+    staffList.pop(chair_index)
+
+    # Pick minute then
+    minute_index = randint(0, 2)
+    minute = staffList[minute_index]
+    staffList.pop(minute_index)
+
+    return chair, minute
+
+def pick_staff(connection, date):
+    sql_query = "date='{}'".format(date)
+
+    # The staff has already been generated
+    if (entry_exists(connection, TABLE_NAME, sql_query)):
+        chair, minute = fetch_entry(connection, TABLE_NAME, sql_query)
+    else:
+        # Generate something random and add to db
+        chair, minute = random_staff()
+        value = "(date, chair, minute) VALUES('{}', '{}', '{}')".format(date, chair, minute)
+        insert_entry(connection, TABLE_NAME, value)
+
+    sys.stdout.write("<b>{}<b><br><b>Chair: {}</b><br><b>Minute</b>: {}".format(date, chair, minute))
+
+
 
 def handle_input(connection, query):
     query = urllib.parse.unquote_plus(query)
-    splitted = query.split("&")
-    author = ""
-    comment = ""
 
-    for field in splitted:
-        pair = field.split("=")
-        if pair[0] == "author":
-            author = pair[1]
-        if pair[0] == "comment":
-            comment = pair[1]
+    date = ""
+    splited = query.split("=")
+    if (splited[0] == "date"):
+        date = splited[1]
+        if (isDate(date)):
+            pick_staff(connection, date)
 
-    value = "(author, post, commit_time) VALUES ('{}', '{}', CURRENT_TIMESTAMP)".format(
-        author,
-        comment
-    )
-    insert_entry(connection, TABLE_NAME, value)
+    
 
 
 
@@ -202,17 +106,15 @@ def main():
     post_query = urllib.parse.unquote(os.environ.get('POST_QUERY'))
 
 
-    sys.stdout.write(HEADER_TEMPLATE.format(datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
-    sys.stdout.write(HTML)
-    sys.stdout.write(POST)
-    sys.stdout.write(DISPLAY)
-
+    sys.stdout.write(HEADER_TEMPLATE.format(datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")))
+    sys.stdout.write(HEADER)
+    sys.stdout.write(DATETIME_PICKER.format(datetime.now().strftime(HTML_DATE_FMT)))
 
     # Connect to database
     connection = establish_connection(SQL_CONFIG)
     connect_database(connection, DB_NAME)
 
-    entry_exists(connection, TABLE_NAME, "id=0")
+    entry_exists(connection, TABLE_NAME, "date=1970-01-01")
 
     # User input
     if get_query:
@@ -220,22 +122,8 @@ def main():
     if post_query:
         handle_input(connection, post_query)
 
-    # Get Content
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM `forum_posts`")
-
-    for result in cursor:
-        row = "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n".format(
-            result[0],
-            result[1],
-            result[2],
-            result[3]
-        )
-        sys.stdout.write(row)
+    # Write terminator
     sys.stdout.write("</table></body></html>")
-
-
-
     sys.stdout.write("\r\n\r\n")
 
 

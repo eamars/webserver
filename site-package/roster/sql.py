@@ -3,7 +3,7 @@ import mysql.connector
 SQL_CREATE_TABLE = \
 """
 CREATE TABLE `{}` (
-    `date` datetime NOT NULL,
+    `date` date NOT NULL UNIQUE,
     `chair` char(64) NOT NULL DEFAULT '',
     `minute` char(64) NOT NULL DEFAULT '',
     PRIMARY KEY (`date`)
@@ -72,6 +72,27 @@ def entry_exists(connection, table_name, condition):
             else:
                 cursor.close()
                 return True
+    except mysql.connector.Error as e:
+        if e.errno == 1146:  # Table doesn't exist
+            print("Creating table [{}]".format(table_name))
+            create_table(cursor, table_name)
+            cursor.close()
+            return False
+        else:
+            print("Error [{}]: entry exists".format(e))
+            print(sql)
+            cursor.close()
+            raise Exception("MySQL")
+
+def fetch_entry(connection, table_name, condition):
+    cursor = connection.cursor()
+
+    sql = "SELECT `chair`, `minute` from `{}` WHERE {}".format(table_name, condition)
+
+    try:
+        cursor.execute(sql)
+        for result in cursor:
+            return result[0], result[1]
     except mysql.connector.Error as e:
         if e.errno == 1146:  # Table doesn't exist
             print("Creating table [{}]".format(table_name))
